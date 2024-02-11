@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload New File</title>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="/">Gallery</a></li>
+    </ul>
+  </nav>
+
+  <h1>Upload New Image</h1>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <ul>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+  <form action="" method=post enctype=multipart/form-data>
+    <input type=file name=files multiple id="fileInput">
+    <input type=submit value=Upload>
+  </form>
+
+  <div id="fileList"></div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      const output = document.getElementById('fileList');
+      const files = event.target.files;
+      let fileListDisplay = '<h2>Selected Files:</h2><ul>';
+      for (let i = 0; i < files.length; i++) {
+        fileListDisplay += '<li>' + files[i].name + '</li>';
+      }
+      fileListDisplay += '</ul>';
+      output.innerHTML = fileListDisplay;
+    });
+  </script>
+</body>
+</html>
+

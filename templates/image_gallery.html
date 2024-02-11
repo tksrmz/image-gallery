@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Image Gallery</title>
+  <style>
+    .image-container { display: flex; flex-wrap: wrap; }
+    .image-box { padding: 10px; }
+    img { width: 200px; }
+    .pagination {text-align: center; margin-top: 20px; }
+    .page-link { margin: 0 5px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="/">Gallery</a></li>
+    </ul>
+  </nav>
+
+  <h1>Image Gallery</h1>
+  <div class="image-container">
+    {% for image in image_files %}
+      <div class="image-box">
+        <a href="{{ url_for('send_image', filename=image) }}">
+          <img src="{{ url_for('send_image', filename=image) }}" alt="{{ image }}">
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="pagination">
+    {% for page_num in range(1, total_pages + 1) %}
+      {% if page_num == current_page %}
+        <span class="page-link">{{ page_num }}</span>
+      {% else %}
+        <a href="/?page={{ page_num }}" class="page-link">{{ page_num }}</a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</body>
+</html>
+
