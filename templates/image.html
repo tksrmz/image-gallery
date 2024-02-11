@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ image_name }}</title>
+  <style>
+    .image-container { display: flex; flex-wrap: wrap; }
+    .image-box { padding: 10px; }
+    img { width: 200px; }
+    .pagination {text-align: center; margin-top: 20px; }
+    .page-link { margin: 0 5px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li><a href="/">Gallery</a></li>
+    </ul>
+  </nav>
+
+  <div class="image-container">
+    <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}" style="width:100vw">
+  </div>
+  <div class="image-info">
+    <h2>{{ image_name }}</h2>
+    {% if title %}
+      <h3>Title</h3>
+      <p>{{title}}</p>
+    {% endif %}
+    <h3>Tag</h3>
+    {% if not tag_list %}
+      <p>No tags</p>
+    {% else %}
+      <ul>
+        {% for tag in tag_list %}
+          <li>{{tag}}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</body>
+</html>
+

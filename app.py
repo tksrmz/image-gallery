@@ -4,14 +4,19 @@ from werkzeug.security import check_password_hash, generate_password_hash
 # from PIL import Image
 import os
 import math
+import sqlite3
+from util.load_config import load_config
 
 PASSWORD_HASH = generate_password_hash('0008')
 USERNAME = 'tk'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 IMAGES_PER_PAGE = 100
 
+config = load_config()
+
 app = Flask(__name__)
 app.config['IMAGE_FOLDER'] = os.path.join(app.root_path, 'static/images')
+app.config['DATABASE'] = os.path.join(app.root_path, config['database']['name'])
 # app.config['UPLOAD_FOLDER'] = app.config['IMAGE_FOLDER']
 # app.config['THUMBNAIL_FOLDER'] = os.path.join(app.root_path, 'thumbnails')
 app.secret_key = 'my_secret_key'
@@ -57,7 +62,28 @@ def send_image(filename):
     if not ('username' in session):
         return redirect(url_for('login'))
 
-    return send_from_directory(app.config['IMAGE_FOLDER'], filename)
+    # Read file info from sqlite3
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute('''
+                SELECT t.name
+                FROM images AS i LEFT JOIN titles AS t
+                  ON i.title_id = t.id
+                WHERE i.name = ?
+            ''', (filename,))
+    title = c.fetchone()[0]
+    c.execute('''
+                SELECT t.name
+                FROM tags AS t
+                JOIN image_tags AS it
+                  ON t.id = it.tag_id
+                JOIN images AS i
+                  ON it.image_id = i.id
+                WHERE i.name = ?
+              ''', (filename,))
+    tag_list = [row[0] for row in c.fetchall()]
+
+    return render_template('image.html', filename=filename, title=title, tag_list=tag_list)
 
 # @app.route('/thumbnails/<filename>')
 # def send_thumbnail(filename):
