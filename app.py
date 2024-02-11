@@ -11,7 +11,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 IMAGES_PER_PAGE = 100
 
 app = Flask(__name__)
-app.config['IMAGE_FOLDER'] = os.path.join(app.root_path, 'imgs')
+app.config['IMAGE_FOLDER'] = os.path.join(app.root_path, 'static/images')
 # app.config['UPLOAD_FOLDER'] = app.config['IMAGE_FOLDER']
 # app.config['THUMBNAIL_FOLDER'] = os.path.join(app.root_path, 'thumbnails')
 app.secret_key = 'my_secret_key'
