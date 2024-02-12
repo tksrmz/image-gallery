@@ -45,5 +45,14 @@ c.execute('''
             )
           ''')
 
+# Create hash table
+c.execute('''
+            CREATE TABLE IF NOT EXISTS hashes (
+                hash TEXT PRIMARY KEY,
+                image_id INTEGER,
+                FOREIGN KEY(image_id) REFERENCES images(id)
+            )
+          ''')
+
 # Close the connection
 conn.close()
