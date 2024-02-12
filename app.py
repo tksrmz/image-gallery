@@ -39,7 +39,7 @@ def show_images():
         return redirect(url_for('login'))
 
     page = request.args.get('page', 1, type=int)
-    image_files = sorted([f for f in os.listdir(app.config['IMAGE_FOLDER']) if os.path.isfile(os.path.join(app.config['IMAGE_FOLDER'], f))])
+    image_list = get_image_list()
 
     # # Ensure thumbnails exist for all images
     # for image in image_files:
@@ -49,11 +49,11 @@ def show_images():
     #         create_thumbnail(original_path, thumbnail_path)
 
     # Pagenation calculations
-    total_images = len(image_files)
+    total_images = len(image_list)
     total_pages = math.ceil(total_images / IMAGES_PER_PAGE)
     start = (page - 1) * IMAGES_PER_PAGE
     end = start + IMAGES_PER_PAGE
-    image_files_to_display = image_files[start:end]
+    image_files_to_display = image_list[start:end]
 
     return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page)
 
@@ -140,6 +140,15 @@ def send_image(filename):
 # def allowed_file(filename):
 #     return '.' in filename and \
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_image_list():
+    # get image list from sqlite3
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute('''SELECT name FROM images''')
+    image_list = [row[0] for row in c.fetchall()]
+    conn.close()
+    return image_list
 
 if __name__ == '__main__':
     app.run(debug=True)
