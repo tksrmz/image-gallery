@@ -82,6 +82,7 @@ def send_image(filename):
                 WHERE i.name = ?
               ''', (filename,))
     tag_list = [row[0] for row in c.fetchall()]
+    conn.close()
 
     return render_template('image.html', filename=filename, title=title, tag_list=tag_list)
 
