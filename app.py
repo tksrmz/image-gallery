@@ -39,7 +39,9 @@ def show_images():
         return redirect(url_for('login'))
 
     page = request.args.get('page', 1, type=int)
-    image_list = get_image_list()
+    title = request.args.get('title')
+    tag = request.args.get('tag')
+    image_list = get_image_list(title, tag)
 
     # # Ensure thumbnails exist for all images
     # for image in image_files:
@@ -55,7 +57,7 @@ def show_images():
     end = start + IMAGES_PER_PAGE
     image_files_to_display = image_list[start:end]
 
-    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page)
+    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, title=title, tag=tag)
 
 @app.route('/images/<filename>')
 def send_image(filename):
@@ -120,11 +122,52 @@ def send_image(filename):
 #     return '.' in filename and \
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_image_list():
+def get_image_list(title, tag):
+    # Change query based on title and tag
+    if title and tag:
+        query = '''
+                    SELECT i.name
+                    FROM images AS i
+                    JOIN titles AS t
+                      ON i.title_id = t.id
+                    JOIN image_tags AS it
+                      ON i.id = it.image_id
+                    JOIN tags AS tg
+                      ON it.tag_id = tg.id
+                    WHERE t.name = ? AND tg.name = ?
+                '''
+        params = (title, tag)
+    elif title:
+        query = '''
+                    SELECT i.name
+                    FROM images AS i
+                    JOIN titles AS t
+                      ON i.title_id = t.id
+                    WHERE t.name = ?
+                '''
+        params = (title,)
+    elif tag:
+        query = '''
+                    SELECT i.name
+                    FROM images AS i
+                    JOIN image_tags AS it
+                      ON i.id = it.image_id
+                    JOIN tags AS tg
+                      ON it.tag_id = tg.id
+                    WHERE tg.name = ?
+                '''
+        params = (tag,)
+    else:
+        query = '''
+                    SELECT name
+                    FROM images
+                '''
+        params = ()
+
     # get image list from sqlite3
     conn = sqlite3.connect(app.config['DATABASE'])
     c = conn.cursor()
-    c.execute('''SELECT name FROM images''')
+    c.execute(query, params)
     image_list = [row[0] for row in c.fetchall()]
     conn.close()
     return image_list

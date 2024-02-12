@@ -25,7 +25,7 @@
     <h2>{{ image_name }}</h2>
     {% if title %}
       <h3>Title</h3>
-      <p>{{title}}</p>
+      <p><a href="/?title={{ title }}">{{title}}</a></p>
     {% endif %}
     <h3>Tag</h3>
     {% if not tag_list %}
@@ -33,7 +33,7 @@
     {% else %}
       <ul>
         {% for tag in tag_list %}
-          <li>{{tag}}</li>
+          <li><a href="/?tag={{ tag }}">{{tag}}</a></li>
         {% endfor %}
       </ul>
     {% endif %}
