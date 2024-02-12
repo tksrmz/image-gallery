@@ -62,28 +62,7 @@ def send_image(filename):
     if not ('username' in session):
         return redirect(url_for('login'))
 
-    # Read file info from sqlite3
-    conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.execute('''
-                SELECT t.name
-                FROM images AS i LEFT JOIN titles AS t
-                  ON i.title_id = t.id
-                WHERE i.name = ?
-            ''', (filename,))
-    title = c.fetchone()[0]
-    c.execute('''
-                SELECT t.name
-                FROM tags AS t
-                JOIN image_tags AS it
-                  ON t.id = it.tag_id
-                JOIN images AS i
-                  ON it.image_id = i.id
-                WHERE i.name = ?
-              ''', (filename,))
-    tag_list = [row[0] for row in c.fetchall()]
-    conn.close()
-
+    title, tag_list = get_image_info(filename)
     return render_template('image.html', filename=filename, title=title, tag_list=tag_list)
 
 # @app.route('/thumbnails/<filename>')
@@ -149,6 +128,30 @@ def get_image_list():
     image_list = [row[0] for row in c.fetchall()]
     conn.close()
     return image_list
+
+def get_image_info(filename):
+    # Read file info from sqlite3
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute('''
+                SELECT t.name
+                FROM images AS i LEFT JOIN titles AS t
+                  ON i.title_id = t.id
+                WHERE i.name = ?
+            ''', (filename,))
+    title = c.fetchone()[0]
+    c.execute('''
+                SELECT t.name
+                FROM tags AS t
+                JOIN image_tags AS it
+                  ON t.id = it.tag_id
+                JOIN images AS i
+                  ON it.image_id = i.id
+                WHERE i.name = ?
+              ''', (filename,))
+    tag_list = [row[0] for row in c.fetchall()]
+    conn.close()
+    return title, tag_list
 
 if __name__ == '__main__':
     app.run(debug=True)
