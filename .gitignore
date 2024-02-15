@@ -1,6 +1,9 @@
 # Project specific files
 # DB
-image_gallery.sqlite3
+image_gallery*.sqlite3
+sqldiff
+sqlite3
+sqlite3_analyzer
 
 # Static files
 # Too big

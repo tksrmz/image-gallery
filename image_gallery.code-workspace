@@ -4,5 +4,21 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"sqltools.useNodeRuntime": true,
+		"sqltools.connections": [
+			{
+				"previewLimit": 50,
+				"driver": "SQLite",
+				"name": "debug",
+				"database": "${workspaceFolder:image-gallery}/image_gallery_debug.sqlite3"
+			},
+			{
+				"previewLimit": 50,
+				"driver": "SQLite",
+				"name": "main",
+				"database": "${workspaceFolder:image-gallery}/image_gallery.sqlite3"
+			}
+		]
+	}
 }

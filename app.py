@@ -8,18 +8,15 @@ import os
 import math
 import sqlite3
 from datetime import datetime
-from util.load_config import load_config
 
 PASSWORD_HASH = generate_password_hash('0008')
 USERNAME = 'tk'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 IMAGES_PER_PAGE = 100
 
-config = load_config()
-
 app = Flask(__name__)
+app.config.from_envvar('IMAGE_GALLERY_ENV_SETTINGS')
 app.config['IMAGE_FOLDER'] = os.path.join(app.root_path, 'static/images')
-app.config['DATABASE'] = os.path.join(app.root_path, config['database']['name'])
 # app.config['THUMBNAIL_FOLDER'] = os.path.join(app.root_path, 'thumbnails')
 app.secret_key = 'my_secret_key'
 
@@ -108,8 +105,9 @@ def upload_file():
                 flash(f'File already exists(hash collision): {filename}')
                 return redirect(request.url)
 
-            file.save(file_path)
             insert_file_data(new_filename, hash)
+            # Save file only after db is updated
+            file.save(file_path)
             # thumbnail_path = os.path.join(app.config['THUMBNAIL_FOLDER'], filename)
             # create_thumbnail(file_path, thumbnail_path)
 
@@ -123,13 +121,14 @@ def insert_file_data(filename, hash):
     conn = sqlite3.connect(app.config['DATABASE'])
     c = conn.cursor()
     c.execute('''
-                INSERT INTO images (name, extension)
-                VALUES (?, ?)
-            ''', (filename, os.path.splitext(filename)[1]))
+                INSERT INTO images (name)
+                VALUES (?)
+            ''', (filename,))
+    image_id = c.lastrowid
     c.execute('''
-                INSERT INTO hashes (hash, image_name)
+                INSERT INTO hashes (hash, image_id)
                 VALUES (?, ?)
-            ''', (hash, filename))
+            ''', (hash, image_id))
     conn.commit()
     conn.close()
 
@@ -148,7 +147,7 @@ def exists_same_hash(hash):
     conn = sqlite3.connect(app.config['DATABASE'])
     c = conn.cursor()
     c.execute('''
-                SELECT image_name
+                SELECT id
                 FROM hashes
                 WHERE hash = ?
             ''', (hash,))
@@ -180,11 +179,11 @@ def get_image_list(title, tag):
                     SELECT i.name
                     FROM images AS i
                     JOIN titles AS t
-                      ON i.title_name = t.name
+                      ON i.title_id = t.id
                     JOIN image_tags AS it
-                      ON i.name = it.image_name
+                      ON i.id = it.image_id
                     JOIN tags AS tg
-                      ON it.tag_name = tg.name
+                      ON it.tag_id = tg.id
                     WHERE t.name = ? AND tg.name = ?
                 '''
         params = (title, tag)
@@ -193,7 +192,7 @@ def get_image_list(title, tag):
                     SELECT i.name
                     FROM images AS i
                     JOIN titles AS t
-                      ON i.title_name = t.name
+                      ON i.title_id = t.id
                     WHERE t.name = ?
                 '''
         params = (title,)
@@ -202,9 +201,9 @@ def get_image_list(title, tag):
                     SELECT i.name
                     FROM images AS i
                     JOIN image_tags AS it
-                      ON i.name = it.image_name
+                      ON i.id = it.image_id
                     JOIN tags AS tg
-                      ON it.tag_name = tg.name
+                      ON it.tag_id = tg.id
                     WHERE tg.name = ?
                 '''
         params = (tag,)
@@ -230,7 +229,7 @@ def get_image_info(filename):
     c.execute('''
                 SELECT t.name
                 FROM images AS i LEFT JOIN titles AS t
-                  ON i.title_name = t.name
+                  ON i.title_id = t.id
                 WHERE i.name = ?
             ''', (filename,))
     title = c.fetchone()[0]
@@ -238,9 +237,9 @@ def get_image_info(filename):
                 SELECT t.name
                 FROM tags AS t
                 JOIN image_tags AS it
-                  ON t.name = it.tag_name
+                  ON t.id = it.tag_id
                 JOIN images AS i
-                  ON it.image_name = i.name
+                  ON it.image_id = i.id
                 WHERE i.name = ?
               ''', (filename,))
     tag_list = [row[0] for row in c.fetchall()]
