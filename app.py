@@ -1,10 +1,13 @@
-from flask import Flask, send_from_directory, render_template, request, redirect, url_for, flash, session
+import hashlib
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+import werkzeug
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 # from PIL import Image
 import os
 import math
 import sqlite3
+from datetime import datetime
 from util.load_config import load_config
 
 PASSWORD_HASH = generate_password_hash('0008')
@@ -17,7 +20,6 @@ config = load_config()
 app = Flask(__name__)
 app.config['IMAGE_FOLDER'] = os.path.join(app.root_path, 'static/images')
 app.config['DATABASE'] = os.path.join(app.root_path, config['database']['name'])
-# app.config['UPLOAD_FOLDER'] = app.config['IMAGE_FOLDER']
 # app.config['THUMBNAIL_FOLDER'] = os.path.join(app.root_path, 'thumbnails')
 app.secret_key = 'my_secret_key'
 
@@ -74,38 +76,87 @@ def send_image(filename):
 
 #     return send_from_directory(app.config['THUMBNAIL_FOLDER'], filename)
 
-# @app.route('/upload', methods=['GET', 'POST'])
-# def upload_file():
-#     if request.method == 'POST':
-#         # Check if the post request has the file part
-#         files = request.files.getlist('files')
-#         # If the user does not select a file, the browser submits an
-#         # empty file without a filename.
-#         if not files or files[0].filename == '':
-#             flash('No selected file')
-#             return redirect(request.url)
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if not ('username' in session):
+        return redirect(url_for('login'))
 
-#         for file in files:
-#             if file and allowed_file(file.filename):
-#                 filename = secure_filename(file.filename)
-#                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if request.method == 'POST':
+        # Check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # If the user does not select a file, the browser submits an
+        # empty file without a filename.
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file:
+            filename = secure_filename(file.filename)
+            new_filename = datetime.now().strftime('%Y%m%d%H%M%S%f') + os.path.splitext(filename)[1]
+            file_path = os.path.join(app.config['IMAGE_FOLDER'], new_filename)
 
-#                 # Check if file already exists
-#                 if os.path.exists(file_path):
-#                     flash(f'File already exists: {filename}')
-#                     continue # Skip saving this file and continue with the next one
+            # Check if file already exists (name collision)
+            if os.path.exists(file_path):
+                flash(f'File already exists(name collision): {filename}')
+                return redirect(request.url)
 
-#                 file.save(file_path)
-#                 thumbnail_path = os.path.join(app.config['THUMBNAIL_FOLDER'], filename)
-#                 create_thumbnail(file_path, thumbnail_path)
+            # Check if file already exists (hash collision)
+            hash = calculate_hash(file)
+            if exists_same_hash(hash):
+                flash(f'File already exists(hash collision): {filename}')
+                return redirect(request.url)
 
-#         flash('File(s) successfully uploaded and thumbnails created')
-#         return redirect(url_for('upload_file'))
+            file.save(file_path)
+            insert_file_data(new_filename, hash)
+            # thumbnail_path = os.path.join(app.config['THUMBNAIL_FOLDER'], filename)
+            # create_thumbnail(file_path, thumbnail_path)
 
-#     if not ('username' in session):
-#         return redirect(url_for('login'))
+            flash(f'File successfully uploaded: {new_filename}')
+            return redirect(url_for('upload_file'))
 
-#     return render_template('upload.html')
+    return render_template('upload.html')
+
+def insert_file_data(filename, hash):
+    # Insert file data into sqlite3
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute('''
+                INSERT INTO images (name, extension)
+                VALUES (?, ?)
+            ''', (filename, os.path.splitext(filename)[1]))
+    c.execute('''
+                INSERT INTO hashes (hash, image_name)
+                VALUES (?, ?)
+            ''', (hash, filename))
+    conn.commit()
+    conn.close()
+
+def calculate_hash(file: werkzeug.datastructures.FileStorage):
+    BLOCKSIZE = 65536
+    hasher = hashlib.md5()
+    buf = file.read(BLOCKSIZE)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = file.read(BLOCKSIZE)
+    # Reset file pointer to the beginning so that the file can be read again
+    file.seek(0)
+    return hasher.hexdigest()
+
+def exists_same_hash(hash):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute('''
+                SELECT image_name
+                FROM hashes
+                WHERE hash = ?
+            ''', (hash,))
+    result = c.fetchone()
+    conn.close()
+
+    # Return True if hash exists, False otherwise
+    return result != None
 
 # def create_thumbnail(image_path, thumbnail_path, size=(100, 100)):
 #     """Create a thumbnail for an image.
