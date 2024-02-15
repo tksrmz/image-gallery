@@ -180,11 +180,11 @@ def get_image_list(title, tag):
                     SELECT i.name
                     FROM images AS i
                     JOIN titles AS t
-                      ON i.title_id = t.id
+                      ON i.title_name = t.name
                     JOIN image_tags AS it
-                      ON i.id = it.image_id
+                      ON i.name = it.image_name
                     JOIN tags AS tg
-                      ON it.tag_id = tg.id
+                      ON it.tag_name = tg.name
                     WHERE t.name = ? AND tg.name = ?
                 '''
         params = (title, tag)
@@ -193,7 +193,7 @@ def get_image_list(title, tag):
                     SELECT i.name
                     FROM images AS i
                     JOIN titles AS t
-                      ON i.title_id = t.id
+                      ON i.title_name = t.name
                     WHERE t.name = ?
                 '''
         params = (title,)
@@ -202,9 +202,9 @@ def get_image_list(title, tag):
                     SELECT i.name
                     FROM images AS i
                     JOIN image_tags AS it
-                      ON i.id = it.image_id
+                      ON i.name = it.image_name
                     JOIN tags AS tg
-                      ON it.tag_id = tg.id
+                      ON it.tag_name = tg.name
                     WHERE tg.name = ?
                 '''
         params = (tag,)
@@ -230,7 +230,7 @@ def get_image_info(filename):
     c.execute('''
                 SELECT t.name
                 FROM images AS i LEFT JOIN titles AS t
-                  ON i.title_id = t.id
+                  ON i.title_name = t.name
                 WHERE i.name = ?
             ''', (filename,))
     title = c.fetchone()[0]
@@ -238,9 +238,9 @@ def get_image_info(filename):
                 SELECT t.name
                 FROM tags AS t
                 JOIN image_tags AS it
-                  ON t.id = it.tag_id
+                  ON t.name = it.tag_name
                 JOIN images AS i
-                  ON it.image_id = i.id
+                  ON it.image_name = i.name
                 WHERE i.name = ?
               ''', (filename,))
     tag_list = [row[0] for row in c.fetchall()]
