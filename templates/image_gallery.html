@@ -20,7 +20,9 @@
   </nav>
 
   <h1>Image Gallery</h1>
-  <h2>Filtered by</h2>
+  {% if tag %}
+    <h2>Filtered by</h2>
+  {% endif %}
   <ul>
     {% if tag %}
       <li>Tag: {{ tag }} (<a href="/">Clear</a>)</li>
