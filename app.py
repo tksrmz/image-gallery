@@ -38,9 +38,8 @@ def show_images():
         return redirect(url_for('login'))
 
     page = request.args.get('page', 1, type=int)
-    title = request.args.get('title')
     tag = request.args.get('tag')
-    image_list = get_image_list(title, tag)
+    image_list = get_image_list(tag)
 
     # # Ensure thumbnails exist for all images
     # for image in image_files:
@@ -56,15 +55,15 @@ def show_images():
     end = start + IMAGES_PER_PAGE
     image_files_to_display = image_list[start:end]
 
-    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, title=title, tag=tag)
+    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, tag=tag)
 
 @app.route('/images/<filename>')
 def send_image(filename):
     if not ('username' in session):
         return redirect(url_for('login'))
 
-    title, tag_list = get_image_info(filename)
-    return render_template('image.html', filename=filename, title=title, tag_list=tag_list)
+    tag_list = get_image_info(filename)
+    return render_template('image.html', filename=filename, tag_list=tag_list)
 
 # @app.route('/thumbnails/<filename>')
 # def send_thumbnail(filename):
@@ -172,31 +171,9 @@ def exists_same_hash(hash):
 #     return '.' in filename and \
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_image_list(title, tag):
-    # Change query based on title and tag
-    if title and tag:
-        query = '''
-                    SELECT i.name
-                    FROM images AS i
-                    JOIN titles AS t
-                      ON i.title_id = t.id
-                    JOIN image_tags AS it
-                      ON i.id = it.image_id
-                    JOIN tags AS tg
-                      ON it.tag_id = tg.id
-                    WHERE t.name = ? AND tg.name = ?
-                '''
-        params = (title, tag)
-    elif title:
-        query = '''
-                    SELECT i.name
-                    FROM images AS i
-                    JOIN titles AS t
-                      ON i.title_id = t.id
-                    WHERE t.name = ?
-                '''
-        params = (title,)
-    elif tag:
+def get_image_list(tag):
+    # Change query based on tags
+    if tag:
         query = '''
                     SELECT i.name
                     FROM images AS i
@@ -228,13 +205,6 @@ def get_image_info(filename):
     c = conn.cursor()
     c.execute('''
                 SELECT t.name
-                FROM images AS i LEFT JOIN titles AS t
-                  ON i.title_id = t.id
-                WHERE i.name = ?
-            ''', (filename,))
-    title = c.fetchone()[0]
-    c.execute('''
-                SELECT t.name
                 FROM tags AS t
                 JOIN image_tags AS it
                   ON t.id = it.tag_id
@@ -244,7 +214,7 @@ def get_image_info(filename):
               ''', (filename,))
     tag_list = [row[0] for row in c.fetchall()]
     conn.close()
-    return title, tag_list
+    return tag_list
 
 if __name__ == '__main__':
     app.run(debug=True)

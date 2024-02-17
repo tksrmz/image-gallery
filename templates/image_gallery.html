@@ -22,19 +22,8 @@
   <h1>Image Gallery</h1>
   <h2>Filtered by</h2>
   <ul>
-    {% if title %}
-      {% if tag %}
-        <li>Title: {{ title }} (<a href="/?tag={{ tag }}">Clear</a>)</li>
-      {% else %}
-        <li>Title: {{ title }} (<a href="/">Clear</a>)</li>
-      {% endif %}
-    {% endif %}
     {% if tag %}
-      {% if title %}
-        <li>Tag: {{ tag }} (<a href="/?title={{ title }}">Clear</a>)</li>
-      {% else %}
-        <li>Tag: {{ tag }} (<a href="/">Clear</a>)</li>
-      {% endif %}
+      <li>Tag: {{ tag }} (<a href="/">Clear</a>)</li>
     {% endif %}
   </ul>
   <div class="image-container">
@@ -51,11 +40,7 @@
       {% if page_num == current_page %}
         <span class="page-link">{{ page_num }}</span>
       {% else %}
-        {% if title and tag %}
-          <a href="/?page={{ page_num }}&title={{ title }}&tag={{ tag }}" class="page-link">{{ page_num }}</a>
-        {% elif title %}
-          <a href="/?page={{ page_num }}&title={{ title }}" class="page-link">{{ page_num }}</a>
-        {% elif tag %}
+        {% if tag %}
           <a href="/?page={{ page_num }}&tag={{ tag }}" class="page-link">{{ page_num }}</a>
         {% else %}
           <a href="/?page={{ page_num }}" class="page-link">{{ page_num }}</a>
