@@ -37,9 +37,13 @@ def show_images():
     if not ('username' in session):
         return redirect(url_for('login'))
 
+    # Get tag list
+    all_tag_list = get_tag_list()
+
+    # Get image list displayed on the page
     page = request.args.get('page', 1, type=int)
-    tag = request.args.get('tag')
-    image_list = get_image_list(tag)
+    selected_tag_list = request.args.getlist('tag')
+    image_list = get_image_list(selected_tag_list)
 
     # # Ensure thumbnails exist for all images
     # for image in image_files:
@@ -55,7 +59,7 @@ def show_images():
     end = start + IMAGES_PER_PAGE
     image_files_to_display = image_list[start:end]
 
-    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, tag=tag)
+    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, selected_tag_list=selected_tag_list, all_tag_list=all_tag_list)
 
 @app.route('/images/<filename>')
 def send_image(filename):
@@ -171,19 +175,19 @@ def exists_same_hash(hash):
 #     return '.' in filename and \
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_image_list(tag):
+def get_image_list(tag_list):
     # Change query based on tags
-    if tag:
+    if tag_list:
         query = '''
-                    SELECT i.name
+                    SELECT DISTINCT i.name
                     FROM images AS i
                     JOIN image_tags AS it
-                      ON i.id = it.image_id
+                        ON i.id = it.image_id
                     JOIN tags AS tg
-                      ON it.tag_id = tg.id
-                    WHERE tg.name = ?
-                '''
-        params = (tag,)
+                        ON it.tag_id = tg.id
+                    WHERE tg.name IN ({})
+                '''.format(','.join(['?'] * len(tag_list)))
+        params = tuple(tag_list)
     else:
         query = '''
                     SELECT name
@@ -212,6 +216,17 @@ def get_image_info(filename):
                   ON it.image_id = i.id
                 WHERE i.name = ?
               ''', (filename,))
+    tag_list = [row[0] for row in c.fetchall()]
+    conn.close()
+    return tag_list
+
+def get_tag_list():
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute('''
+                SELECT name
+                FROM tags
+            ''')
     tag_list = [row[0] for row in c.fetchall()]
     conn.close()
     return tag_list

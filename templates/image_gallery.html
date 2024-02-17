@@ -25,13 +25,19 @@
 
   <main>
     <article>
-      {% if tag %}
+      {% if selected_tag_list %}
         <section>
           <h2>Filtered by</h2>
           <ul>
-            {% if tag %}
-              <li>{{ tag }} (<a href="/">Clear</a>)</li>
-            {% endif %}
+            {% for selected_tag in selected_tag_list %}
+              <li>
+                {{ selected_tag }}
+                {% set query_params = selected_tag_list|reject('equalto', selected_tag)|list %}
+                (
+                <a href="{% if query_params|length > 0 %}?tag={{ query_params|map('urlencode')|join('&tag=') }}{% else %}/{% endif %}">Clear</a>
+                )
+              </li>
+            {% endfor %}
           </ul>
         </section>
       {% endif %}
@@ -55,8 +61,8 @@
           {% if page_num == current_page %}
             <span class="page-link">{{ page_num }}</span>
           {% else %}
-            {% if tag %}
-              <a href="/?page={{ page_num }}&tag={{ tag }}" class="page-link">{{ page_num }}</a>
+            {% if selected_tag_list %}
+              <a href="/?page={{ page_num }}&tag={{ selected_tag_list|join('&tag=') }}" class="page-link">{{ page_num }}</a>
             {% else %}
               <a href="/?page={{ page_num }}" class="page-link">{{ page_num }}</a>
             {% endif %}
@@ -64,7 +70,35 @@
         {% endfor %}
       </section>
     </article>
+
+    <aside>
+      <h3>Tags</h3>
+      <form action="/" method="get" id="tagsForm">
+        {% for tag in all_tag_list %}
+          <div>
+            <input type="checkbox" id="tag-{{ tag }}" name="tag" value="{{ tag }}" {% if tag in selected_tag_list %}checked{% endif %}>
+            <label for="tag-{{ tag }}">{{ tag }}</label>
+          </div>
+        {% endfor %}
+        <input type="submit" value="Filter">
+        <button type="button" onclick="clearAllChecks()">Clear All</button>
+      </form>
+    </aside>
   </main>
+
+  <script>
+    function clearAllChecks() {
+      // Get all input elements within the form
+      var inputs = document.getElementById('tagsForm').getElementsByTagName('input');
+
+      // Loop through the input elements and uncheck if it's a checkbox
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].type == "checkbox") {
+          inputs[i].checked = false;
+        }
+      }
+    }
+  </script>
 </body>
 </html>
 
