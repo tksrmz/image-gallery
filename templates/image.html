@@ -6,7 +6,7 @@
   <style>
     .image-container { display: flex; flex-wrap: wrap; }
     .image-box { padding: 10px; }
-    img { width: 200px; }
+    img { width: 100vw; }
     .pagination {text-align: center; margin-top: 20px; }
     .page-link { margin: 0 5px; }
   </style>
@@ -20,7 +20,7 @@
   </nav>
 
   <div class="image-container">
-    <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}" style="width:100vw">
+    <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}">
   </div>
   <div class="image-info">
     <h2>{{ image_name }}</h2>
