@@ -10,8 +10,12 @@
     .pagination {text-align: center; margin-top: 20px; }
     .page-link { margin: 0 5px; }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+  <header>
+    <h1>Image Gallery</h1>
+  </header>
   <nav>
     <ul>
       <li><span>Gallery</span></li>
@@ -19,37 +23,48 @@
     </ul>
   </nav>
 
-  <h1>Image Gallery</h1>
-  {% if tag %}
-    <h2>Filtered by</h2>
-  {% endif %}
-  <ul>
-    {% if tag %}
-      <li>Tag: {{ tag }} (<a href="/">Clear</a>)</li>
-    {% endif %}
-  </ul>
-  <div class="image-container">
-    {% for image in image_files %}
-      <div class="image-box">
-        <a href="{{ url_for('send_image', filename=image) }}">
-          <img src="{{ url_for('static', filename='images/' + image) }}" alt="{{ image }}">
-        </a>
-      </div>
-    {% endfor %}
-  </div>
-  <div class="pagination">
-    {% for page_num in range(1, total_pages + 1) %}
-      {% if page_num == current_page %}
-        <span class="page-link">{{ page_num }}</span>
-      {% else %}
-        {% if tag %}
-          <a href="/?page={{ page_num }}&tag={{ tag }}" class="page-link">{{ page_num }}</a>
-        {% else %}
-          <a href="/?page={{ page_num }}" class="page-link">{{ page_num }}</a>
-        {% endif %}
+  <main>
+    <article>
+      {% if tag %}
+        <section>
+          <h2>Filtered by</h2>
+          <ul>
+            {% if tag %}
+              <li>{{ tag }} (<a href="/">Clear</a>)</li>
+            {% endif %}
+          </ul>
+        </section>
       {% endif %}
-    {% endfor %}
-  </div>
+
+      <section>
+        <h2>Images</h2>
+        <div class="image-container">
+          {% for image in image_files %}
+            <div class="image-box">
+              <a href="{{ url_for('send_image', filename=image) }}">
+                <img src="{{ url_for('static', filename='images/' + image) }}" alt="{{ image }}">
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="pagination">
+        <h2>Pages</h2>
+        {% for page_num in range(1, total_pages + 1) %}
+          {% if page_num == current_page %}
+            <span class="page-link">{{ page_num }}</span>
+          {% else %}
+            {% if tag %}
+              <a href="/?page={{ page_num }}&tag={{ tag }}" class="page-link">{{ page_num }}</a>
+            {% else %}
+              <a href="/?page={{ page_num }}" class="page-link">{{ page_num }}</a>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </section>
+    </article>
+  </main>
 </body>
 </html>
 

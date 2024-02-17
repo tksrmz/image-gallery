@@ -10,8 +10,12 @@
     .pagination {text-align: center; margin-top: 20px; }
     .page-link { margin: 0 5px; }
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+  <header>
+    <h1>Image Gallery</h1>
+  </header>
   <nav>
     <ul>
       <li><a href="/">Gallery</a></li>
@@ -19,22 +23,24 @@
     </ul>
   </nav>
 
-  <div class="image-container">
-    <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}">
-  </div>
-  <div class="image-info">
-    <h2>{{ image_name }}</h2>
-    <h3>Tag</h3>
-    {% if not tag_list %}
-      <p>No tags</p>
-    {% else %}
-      <ul>
-        {% for tag in tag_list %}
-          <li><a href="/?tag={{ tag }}">{{tag}}</a></li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  </div>
+  <main>
+    <section class="image-container">
+      <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}">
+    </section>
+    <section class="image-info">
+      <h2>{{ filename }}</h2>
+      <h3>Tag</h3>
+      {% if not tag_list %}
+        <p>No tags</p>
+      {% else %}
+        <ul>
+          {% for tag in tag_list %}
+            <li><a href="/?tag={{ tag }}">{{tag}}</a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  </main>
 </body>
 </html>
 

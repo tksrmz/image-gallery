@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Upload New File</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+  <header>
+    <h1>Image Gallery</h1>
+  </header>
   <nav>
     <ul>
       <li><a href="/">Gallery</a></li>
@@ -11,20 +16,22 @@
     </ul>
   </nav>
 
-  <h1>Upload New Image</h1>
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <ul>
-        {% for message in messages %}
-          <li>{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
-  <form action="" method=post enctype=multipart/form-data>
-    <input type=file name=file id="fileInput">
-    <input type=submit value=Upload>
-  </form>
+  <main>
+    <h2>Upload New Image</h2>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <form action="" method=post enctype=multipart/form-data>
+      <input type=file name=file id="fileInput">
+      <input type=submit value=Upload>
+    </form>
+  </main>
 
   <!-- <div id="fileList"></div> -->
 
