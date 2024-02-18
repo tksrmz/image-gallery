@@ -25,11 +25,11 @@
 
   <main>
     <section class="image-container">
+      <h2>{{ filename }}</h2>
       <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}">
     </section>
     <section class="image-info">
-      <h2>{{ filename }}</h2>
-      <h3>Tag</h3>
+      <h2>Tag</h2>
       {% if not tag_list %}
         <p>No tags</p>
       {% else %}
