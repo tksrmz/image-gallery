@@ -10,8 +10,8 @@
 			{
 				"previewLimit": 50,
 				"driver": "SQLite",
-				"name": "debug",
-				"database": "${workspaceFolder:image-gallery}/image_gallery_debug.sqlite3"
+				"name": "dummy",
+				"database": "${workspaceFolder:image-gallery}/image_gallery_dummy.sqlite3"
 			},
 			{
 				"previewLimit": 50,
