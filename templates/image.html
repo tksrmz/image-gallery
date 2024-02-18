@@ -28,17 +28,16 @@
       <h2>{{ filename }}</h2>
       <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}">
     </section>
-    <section class="image-info">
-      <h2>Tag</h2>
-      {% if not tag_list %}
-        <p>No tags</p>
-      {% else %}
-        <ul>
-          {% for tag in tag_list %}
-            <li><a href="/?tag={{ tag }}">{{tag}}</a></li>
-          {% endfor %}
-        </ul>
-      {% endif %}
+    <section>
+      <form action="{{ url_for('update_tags', filename=filename) }}" method="post" id="tagsForm">
+        {% for tag in all_tag_list %}
+          <div>
+            <input type="checkbox" id="tag-{{ tag }}" name="tag" value="{{ tag }}" {% if tag in attached_tag_list %}checked{% endif %}>
+            <label for="tag-{{ tag }}">{{ tag }}</label>
+          </div>
+        {% endfor %}
+        <input type="submit" value="Filter">
+      </form>
     </section>
   </main>
 </body>

@@ -66,8 +66,10 @@ def send_image(filename):
     if not ('username' in session):
         return redirect(url_for('login'))
 
-    tag_list = get_image_info(filename)
-    return render_template('image.html', filename=filename, tag_list=tag_list)
+    attached_tag_list = get_tags_attached_to_image(filename)
+    all_tag_list = get_tag_list()
+
+    return render_template('image.html', filename=filename, attached_tag_list=attached_tag_list, all_tag_list=all_tag_list)
 
 # @app.route('/thumbnails/<filename>')
 # def send_thumbnail(filename):
@@ -75,6 +77,23 @@ def send_image(filename):
 #         return redirect(url_for('login'))
 
 #     return send_from_directory(app.config['THUMBNAIL_FOLDER'], filename)
+
+@app.route('/images/<filename>/tags', methods=['POST'])
+def update_tags(filename):
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    sent_tag_list = request.form.getlist('tag')
+    attached_tag_list = get_tags_attached_to_image(filename)
+
+    inserted_tag_set = set(sent_tag_list) - set(attached_tag_list)
+    attach_tag_to_image(inserted_tag_set, filename)
+
+    deleted_tag_set = set(attached_tag_list) - set(sent_tag_list)
+    detach_tag_from_image(deleted_tag_set, filename)
+
+    return redirect(url_for('send_image', filename=filename))
+
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -203,7 +222,7 @@ def get_image_list(tag_list):
     conn.close()
     return image_list
 
-def get_image_info(filename):
+def get_tags_attached_to_image(filename):
     # Read file info from sqlite3
     conn = sqlite3.connect(app.config['DATABASE'])
     c = conn.cursor()
@@ -230,6 +249,29 @@ def get_tag_list():
     tag_list = [row[0] for row in c.fetchall()]
     conn.close()
     return tag_list
+
+def attach_tag_to_image(tag_list, filename):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    for tag in tag_list:
+        c.execute('''
+                    INSERT INTO image_tags (image_id, tag_id)
+                        SELECT (SELECT id FROM images WHERE name = ?), (SELECT id FROM tags WHERE name = ?)
+                ''', (filename, tag))
+    conn.commit()
+    conn.close()
+
+def detach_tag_from_image(tag_list, filename):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    for tag in tag_list:
+        c.execute('''
+                    DELETE FROM image_tags
+                    WHERE image_id = (SELECT id FROM images WHERE name = ?)
+                      AND tag_id = (SELECT id FROM tags WHERE name = ?)
+                ''', (filename, tag))
+    conn.commit()
+    conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
