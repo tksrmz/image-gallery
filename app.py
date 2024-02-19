@@ -94,6 +94,12 @@ def update_tags(filename):
 
     return redirect(url_for('send_image', filename=filename))
 
+@app.route('/tags')
+def show_tags():
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    return render_template('tags.html', all_tag_list=get_tag_list())
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():

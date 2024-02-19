@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tags</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Image Gallery</h1>
+  </header>
+  <nav>
+    <ul>
+      <li><a href="{{ url_for('show_images') }}">Gallery</a></li>
+      <li><a href="{{ url_for('upload_file') }}">Upload</a></li>
+      <li>Tags</li>
+    </ul>
+  </nav>
+
+  <main>
+    <h2>Tags</h2>
+    {% if all_tag_list %}
+      <ul>
+        {% for tag in all_tag_list %}
+          <li>{{ tag }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No tags found.</p>
+    {% endif %}
+  </main>
+</body>
+</html>
+
