@@ -27,18 +27,14 @@
     <article>
       {% if selected_tag_list %}
         <section>
-          <h2>Filtered by</h2>
+          <h2>Filter setting</h2>
+          <p>Filter type: {{ filter_type }}</p>
           <ul>
             {% for selected_tag in selected_tag_list %}
-              <li>
-                {{ selected_tag }}
-                {% set query_params = selected_tag_list|reject('equalto', selected_tag)|list %}
-                (
-                <a href="{% if query_params|length > 0 %}?tag={{ query_params|map('urlencode')|join('&tag=') }}{% else %}/{% endif %}">Clear</a>
-                )
-              </li>
+              <li>{{ selected_tag }}</li>
             {% endfor %}
           </ul>
+          <p><a href="{{ url_for('show_images') }}">Clear filter</a></p>
         </section>
       {% endif %}
 
@@ -80,6 +76,15 @@
             <label for="tag-{{ tag }}">{{ tag }}</label>
           </div>
         {% endfor %}
+        {% if all_tag_list %}
+          <legend>Filter type</legend>
+          <div>
+            <input type="radio" id="and" name="filter_type" value="and" {% if filter_type == 'and' %}checked{% endif %}>
+            <label for="and">AND</label>
+            <input type="radio" id="or" name="filter_type" value="or" {% if filter_type == 'or' %}checked{% endif %}>
+            <label for="or">OR</label>
+          </div>
+        {% endif %}
         <input type="submit" value="Filter">
         <button type="button" onclick="clearAllChecks()">Clear All</button>
       </form>

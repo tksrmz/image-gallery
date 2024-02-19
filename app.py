@@ -37,13 +37,13 @@ def show_images():
     if not ('username' in session):
         return redirect(url_for('login'))
 
-    # Get tag list
-    all_tag_list = get_tag_list()
-
-    # Get image list displayed on the page
+    # Get query parameters
     page = request.args.get('page', 1, type=int)
     selected_tag_list = request.args.getlist('tag')
-    image_list = get_image_list(selected_tag_list)
+    filter_type = request.args.get('filter_type', 'and')
+
+    # Get image list displayed on the page
+    image_list = get_image_list_and(selected_tag_list) if filter_type == 'and' else get_image_list_or(selected_tag_list)
 
     # # Ensure thumbnails exist for all images
     # for image in image_files:
@@ -59,7 +59,7 @@ def show_images():
     end = start + IMAGES_PER_PAGE
     image_files_to_display = image_list[start:end]
 
-    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, selected_tag_list=selected_tag_list, all_tag_list=all_tag_list)
+    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, selected_tag_list=selected_tag_list, all_tag_list=get_tag_list(), filter_type=filter_type)
 
 @app.route('/images/<filename>')
 def send_image(filename):
@@ -194,7 +194,7 @@ def exists_same_hash(hash):
 #     return '.' in filename and \
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_image_list(tag_list):
+def get_image_list_or(tag_list):
     # Change query based on tags
     if tag_list:
         query = '''
@@ -215,12 +215,32 @@ def get_image_list(tag_list):
         params = ()
 
     # get image list from sqlite3
-    conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.execute(query, params)
-    image_list = [row[0] for row in c.fetchall()]
-    conn.close()
-    return image_list
+    return get_list_of_single_column(query, params)
+
+def get_image_list_and(tag_list):
+    # Change query based on tags
+    if tag_list:
+        query = '''
+                    SELECT i.name
+                    FROM images AS i
+                    JOIN image_tags AS it
+                        ON i.id = it.image_id
+                    JOIN tags AS tg
+                        ON it.tag_id = tg.id
+                    WHERE tg.name IN ({})
+                    GROUP BY i.name
+                    HAVING COUNT(DISTINCT tg.name) = ?
+                '''.format(','.join(['?'] * len(tag_list)))
+        params = tuple(tag_list + [len(tag_list)])
+    else:
+        query = '''
+                    SELECT name
+                    FROM images
+                '''
+        params = ()
+
+    # get image list from sqlite3
+    return get_list_of_single_column(query, params)
 
 def get_tags_attached_to_image(filename):
     # Read file info from sqlite3
@@ -272,6 +292,14 @@ def detach_tag_from_image(tag_list, filename):
                 ''', (filename, tag))
     conn.commit()
     conn.close()
+
+def get_list_of_single_column(query, params):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    c.execute(query, params)
+    result = [row[0] for row in c.fetchall()]
+    conn.close()
+    return result
 
 if __name__ == '__main__':
     app.run(debug=True)
