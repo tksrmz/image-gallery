@@ -57,10 +57,12 @@
           {% if page_num == current_page %}
             <span class="page-link">{{ page_num }}</span>
           {% else %}
+            {% set base_url_with_page = url_for('show_images', page=page_num) %}
             {% if selected_tag_list %}
-              <a href="/?page={{ page_num }}&tag={{ selected_tag_list|join('&tag=') }}" class="page-link">{{ page_num }}</a>
+              {% set tag_query = '&tag=' + selected_tag_list|join('&tag=') %}
+              <a href="{{ base_url_with_page + tag_query }}'" class="page-link">{{ page_num }}</a>
             {% else %}
-              <a href="/?page={{ page_num }}" class="page-link">{{ page_num }}</a>
+              <a href="{{ base_url_with_page }}" class="page-link">{{ page_num }}</a>
             {% endif %}
           {% endif %}
         {% endfor %}
