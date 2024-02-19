@@ -9,8 +9,9 @@ CREATE TABLE IF NOT EXISTS images (
 );
 
 CREATE TABLE IF NOT EXISTS image_tags (
-    image_id INTEGER NOT NULL,
-    tag_id INTEGER NOT NULL,
+    image_id INTEGER,
+    tag_id INTEGER,
+    PRIMARY KEY (image_id, tag_id),
     FOREIGN KEY(image_id) REFERENCES images(id),
     FOREIGN KEY(tag_id) REFERENCES tags(id)
 );
