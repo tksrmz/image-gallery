@@ -79,7 +79,7 @@ def send_image(filename):
 #     return send_from_directory(app.config['THUMBNAIL_FOLDER'], filename)
 
 @app.route('/images/<filename>/tags', methods=['POST'])
-def update_tags(filename):
+def update_tags_on_image(filename):
     if not ('username' in session):
         return redirect(url_for('login'))
 
@@ -94,10 +94,23 @@ def update_tags(filename):
 
     return redirect(url_for('send_image', filename=filename))
 
-@app.route('/tags')
+@app.route('/tags', methods=['GET', 'POST'])
 def show_tags():
     if not ('username' in session):
         return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        tag = request.form['tag']
+        conn = sqlite3.connect(app.config['DATABASE'])
+        c = conn.cursor()
+        c.execute('''
+                    INSERT INTO tags (name)
+                    VALUES (?)
+                ''', (tag,))
+        conn.commit()
+        conn.close()
+        flash(f'Tag successfully added: {tag}')
+        return redirect(url_for('show_tags'))
 
     return render_template('tags.html', all_tag_list=get_tag_list())
 

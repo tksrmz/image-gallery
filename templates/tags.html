@@ -19,15 +19,36 @@
 
   <main>
     <h2>Tags</h2>
-    {% if all_tag_list %}
-      <ul>
-        {% for tag in all_tag_list %}
-          <li>{{ tag }}</li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No tags found.</p>
-    {% endif %}
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <section>
+      <h3>Create new tag</h3>
+      <form action="{{ url_for('show_tags') }}" method="post">
+        <label for="tag">Tag name:</label>
+        <input type="text" id="tag" name="tag" required>
+        <button type="submit">Create</button>
+    </section>
+
+    <section>
+      <h3>Tags list</h3>
+      {% if all_tag_list %}
+        <ul>
+          {% for tag in all_tag_list %}
+            <li>{{ tag }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No tags found.</p>
+      {% endif %}
+    </section>
   </main>
 </body>
 </html>
