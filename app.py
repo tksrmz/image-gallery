@@ -307,5 +307,24 @@ def get_list_of_single_column(query, params):
     conn.close()
     return result
 
+def execute_script_from_file(filename):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    c = conn.cursor()
+    with open(filename, 'r') as f:
+        sql = f.read()
+        c.executescript(sql)
+    conn.close()
+
+# Setup for dummy mode
+if os.environ.get('DATA_SOURCE', '') == 'dummy':
+    app.logger.info('Using dummy database')
+    # Execute script to drop tables then create tables
+    execute_script_from_file('sql/drop_tables.sql')
+    execute_script_from_file('sql/create_tables.sql')
+
 if __name__ == '__main__':
+    # Code in this block will only be executed if this file is run directly (python app.py)
+    # It will not be executed if this file is imported as a module (flask run)
+    app.logger.info('App is executing directly')
+
     app.run(debug=True)
