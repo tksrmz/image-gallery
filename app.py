@@ -43,7 +43,13 @@ def show_images():
     filter_type = request.args.get('filter_type', 'and')
 
     # Get image list displayed on the page
-    image_list = get_image_list_and(selected_tag_list) if filter_type == 'and' else get_image_list_or(selected_tag_list)
+    if len(selected_tag_list) > 0 and filter_type == 'and':
+        image_list = get_image_list_and(selected_tag_list)
+    elif len(selected_tag_list) > 0 and filter_type == 'or':
+        image_list = get_image_list_or(selected_tag_list)
+    else:
+        # Get all image if no tag is selected or filter type is something but expected
+        image_list = get_image_list()
 
     # # Ensure thumbnails exist for all images
     # for image in image_files:
@@ -100,16 +106,14 @@ def show_tags():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
+        # Get request param
         tag = request.form['tag']
-        conn = sqlite3.connect(app.config['DATABASE'])
-        c = conn.cursor()
-        c.execute('''
-                    INSERT INTO tags (name)
-                    VALUES (?)
-                ''', (tag,))
-        conn.commit()
-        conn.close()
-        flash(f'Tag successfully added: {tag}')
+        try:
+            create_tag(tag)
+        except sqlite3.IntegrityError:
+            flash(f'Tag already exists: {tag}')
+        else:
+            flash(f'Tag successfully created: {tag}')
         return redirect(url_for('show_tags'))
 
     return render_template('tags.html', all_tag_list=get_tag_list())
@@ -160,17 +164,26 @@ def upload_file():
 def insert_file_data(filename, hash):
     # Insert file data into sqlite3
     conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.execute('''
-                INSERT INTO images (name)
-                VALUES (?)
-            ''', (filename,))
-    image_id = c.lastrowid
-    c.execute('''
-                INSERT INTO hashes (hash, image_id)
-                VALUES (?, ?)
-            ''', (hash, image_id))
-    conn.commit()
+
+    with conn:
+        # images.id is an alias for rowid as images.id is an INTEGER PRIMARY KEY
+        #
+        # > if a rowid table has a primary key that consists of a single column and the declared
+        # type of that column is "INTEGER" in any mixture of upper and lower case, then the column
+        # becomes an alias for the rowid.
+        # https://www.sqlite.org/lang_createtable.html#rowids_and_the_integer_primary_key
+
+        # name will not conflict as timestamp is used as filename so try-except is not necessary
+        image_id = conn.execute('''
+                    INSERT INTO images (name)
+                    VALUES (?)
+                ''', (filename,)).lastrowid
+
+        # Uniqueness of hash is checked before this function is called so try-except is not necessary
+        conn.execute('''
+                    INSERT INTO hashes (hash, image_id)
+                    VALUES (?, ?)
+                ''', (hash, image_id))
     conn.close()
 
 def calculate_hash(file: werkzeug.datastructures.FileStorage):
@@ -186,13 +199,11 @@ def calculate_hash(file: werkzeug.datastructures.FileStorage):
 
 def exists_same_hash(hash):
     conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.execute('''
+    result = conn.execute('''
                 SELECT id
                 FROM hashes
                 WHERE hash = ?
-            ''', (hash,))
-    result = c.fetchone()
+            ''', (hash,)).fetchone()
     conn.close()
 
     # Return True if hash exists, False otherwise
@@ -213,119 +224,104 @@ def exists_same_hash(hash):
 #     return '.' in filename and \
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_image_list_or(tag_list):
-    # Change query based on tags
-    if tag_list:
-        query = '''
-                    SELECT DISTINCT i.name
-                    FROM images AS i
-                    JOIN image_tags AS it
-                        ON i.id = it.image_id
-                    JOIN tags AS tg
-                        ON it.tag_id = tg.id
-                    WHERE tg.name IN ({})
-                '''.format(','.join(['?'] * len(tag_list)))
-        params = tuple(tag_list)
-    else:
-        query = '''
-                    SELECT name
-                    FROM images
-                '''
-        params = ()
+def get_image_list():
+    conn = sqlite3.connect(app.config['DATABASE'])
+    result = conn.execute('SELECT name FROM images').fetchall()
+    conn.close()
+    return [row[0] for row in result]
 
-    # get image list from sqlite3
-    return get_list_of_single_column(query, params)
+def get_image_list_or(tag_list):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    result = conn.execute(f'''
+            SELECT DISTINCT i.name
+            FROM images AS i
+            JOIN image_tags AS it
+                ON i.id = it.image_id
+            JOIN tags AS tg
+                ON it.tag_id = tg.id
+            WHERE tg.name IN ({','.join(['?'] * len(tag_list))})
+        ''', tuple(tag_list)).fetchall()
+    conn.close()
+    return [row[0] for row in result]
 
 def get_image_list_and(tag_list):
-    # Change query based on tags
-    if tag_list:
-        query = '''
-                    SELECT i.name
-                    FROM images AS i
-                    JOIN image_tags AS it
-                        ON i.id = it.image_id
-                    JOIN tags AS tg
-                        ON it.tag_id = tg.id
-                    WHERE tg.name IN ({})
-                    GROUP BY i.name
-                    HAVING COUNT(DISTINCT tg.name) = ?
-                '''.format(','.join(['?'] * len(tag_list)))
-        params = tuple(tag_list + [len(tag_list)])
-    else:
-        query = '''
-                    SELECT name
-                    FROM images
-                '''
-        params = ()
-
-    # get image list from sqlite3
-    return get_list_of_single_column(query, params)
+    conn = sqlite3.connect(app.config['DATABASE'])
+    result = conn.execute(f'''
+            SELECT i.name
+            FROM images AS i
+            JOIN image_tags AS it
+                ON i.id = it.image_id
+            JOIN tags AS tg
+                ON it.tag_id = tg.id
+            WHERE tg.name IN ({','.join(['?'] * len(tag_list))})
+            GROUP BY i.name
+            HAVING COUNT(DISTINCT tg.name) = ?
+        ''', tuple(tag_list + [len(tag_list)])).fetchall()
+    conn.close()
+    return [row[0] for row in result]
 
 def get_tags_attached_to_image(filename):
     # Read file info from sqlite3
     conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.execute('''
+    query_result = conn.execute('''
                 SELECT t.name
                 FROM tags AS t
                 JOIN image_tags AS it
-                  ON t.id = it.tag_id
+                    ON t.id = it.tag_id
                 JOIN images AS i
-                  ON it.image_id = i.id
+                    ON it.image_id = i.id
                 WHERE i.name = ?
-              ''', (filename,))
-    tag_list = [row[0] for row in c.fetchall()]
+            ''', (filename,)).fetchall()
+    tag_list = [row[0] for row in query_result]
     conn.close()
     return tag_list
 
 def get_tag_list():
     conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.execute('''
-                SELECT name
-                FROM tags
-            ''')
-    tag_list = [row[0] for row in c.fetchall()]
+    tag_list = [row[0] for row in conn.execute('SELECT name FROM tags').fetchall()]
     conn.close()
     return tag_list
 
+def create_tag(tag):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    try:
+        with conn:
+            conn.execute('INSERT INTO tags (name) VALUES (?)', (tag,))
+    except sqlite3.IntegrityError:
+        raise
+    finally:
+        conn.close()
+
 def attach_tag_to_image(tag_list, filename):
     conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    for tag in tag_list:
-        c.execute('''
+    # tag_list is a list of tags to attach to the image
+    # and tags in tag_list is not attached to the image yet
+    # so no need to add try-except for IntegrityError
+    with conn:
+        conn.executemany('''
                     INSERT INTO image_tags (image_id, tag_id)
-                        SELECT (SELECT id FROM images WHERE name = ?), (SELECT id FROM tags WHERE name = ?)
-                ''', (filename, tag))
-    conn.commit()
+                    SELECT
+                        (SELECT id FROM images WHERE name = ?),
+                        (SELECT id FROM tags WHERE name = ?)
+                ''', [(filename, tag) for tag in tag_list])
     conn.close()
 
 def detach_tag_from_image(tag_list, filename):
     conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    for tag in tag_list:
-        c.execute('''
+    with conn:
+        conn.executemany('''
                     DELETE FROM image_tags
                     WHERE image_id = (SELECT id FROM images WHERE name = ?)
-                      AND tag_id = (SELECT id FROM tags WHERE name = ?)
-                ''', (filename, tag))
-    conn.commit()
+                    AND tag_id = (SELECT id FROM tags WHERE name = ?)
+                ''', [(filename, tag) for tag in tag_list])
     conn.close()
-
-def get_list_of_single_column(query, params):
-    conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
-    c.execute(query, params)
-    result = [row[0] for row in c.fetchall()]
-    conn.close()
-    return result
 
 def execute_script_from_file(filename):
     conn = sqlite3.connect(app.config['DATABASE'])
-    c = conn.cursor()
     with open(filename, 'r') as f:
         sql = f.read()
-        c.executescript(sql)
+        with conn:
+            conn.executescript(sql)
     conn.close()
 
 # Setup for dummy mode
