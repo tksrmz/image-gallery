@@ -35,6 +35,7 @@
         <label for="tag">Tag name:</label>
         <input type="text" id="tag" name="tag" required>
         <button type="submit">Create</button>
+      </form>
     </section>
 
     <section>
@@ -42,7 +43,13 @@
       {% if all_tag_list %}
         <ul>
           {% for tag in all_tag_list %}
-            <li>{{ tag }}</li>
+            <li>
+              {{ tag }}
+              <form action="{{ url_for('update_tag', tagname=tag) }}" method="post">
+                <button type="submit">Rename to...</button>
+                <input type="text" id="newname" name="newname" required>
+              </form>
+            </li>
           {% endfor %}
         </ul>
       {% else %}

@@ -118,6 +118,28 @@ def show_tags():
 
     return render_template('tags.html', all_tag_list=get_tag_list())
 
+@app.route('/tags/<tagname>', methods=['POST'])
+def update_tag(tagname):
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        # Get request param
+        new_name = request.form['newname']
+        # Rename tag
+        try:
+            update_tag_name(tagname, new_name)
+        except sqlite3.IntegrityError:
+            flash(f'Tag already exists. Nothing updated: {new_name}')
+        except ValueError as err:
+            flash(f'Error: {str(err)}: {tagname}', 'error')
+        else:
+            flash(f'Tag successfully renamed: {tagname} -> {new_name}')
+
+        return redirect(url_for('show_tags'))
+    else:
+        return redirect(url_for('show_tags'))
+
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if not ('username' in session):
@@ -288,6 +310,26 @@ def create_tag(tag):
         with conn:
             conn.execute('INSERT INTO tags (name) VALUES (?)', (tag,))
     except sqlite3.IntegrityError:
+        raise
+    finally:
+        conn.close()
+
+def update_tag_name(current, new):
+    conn = sqlite3.connect(app.config['DATABASE'])
+    try:
+        with conn:
+            match conn.execute('''
+                        UPDATE tags SET name = ? WHERE name = ?
+                    ''', (new, current)).rowcount:
+                # Can't update the target tag
+                case 0: raise ValueError('No tag found')
+                # Normal case
+                case 1: pass
+                # Multiple tags found
+                case _: raise ValueError('Multiple tags found')
+    except sqlite3.IntegrityError:
+        raise
+    except ValueError:
         raise
     finally:
         conn.close()
