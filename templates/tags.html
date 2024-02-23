@@ -49,6 +49,7 @@
                 <button type="submit">Rename to...</button>
                 <input type="text" id="newname" name="newname" required>
               </form>
+              <button class="delete-button" value="{{ tag }}" style="color:red">DELETE</button>
             </li>
           {% endfor %}
         </ul>
@@ -57,6 +58,25 @@
       {% endif %}
     </section>
   </main>
+
+  <script>
+    // Send a DELETE request when DELETE button is pressed with corresponding tag name
+    const deleteButtons = document.querySelectorAll('.delete-button');
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', async (e) => {
+        const tag = e.target.value;
+        const response = await fetch(`/tags/${tag}`, {
+          method: 'DELETE'
+        });
+        // Follow the redirect
+        if (response.redirected) {
+          window
+            .fetch(response.url)
+            .then(() => window.location.reload());
+        }
+      });
+    });
+  </script>
 </body>
 </html>
 

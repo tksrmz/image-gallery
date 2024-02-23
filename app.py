@@ -139,27 +139,30 @@ def show_tags():
 
     return render_template('tags.html', all_tag_list=get_tag_list())
 
-@app.route('/tags/<tagname>', methods=['POST'])
+@app.route('/tags/<tagname>', methods=['POST', 'DELETE'])
 def update_tag(tagname):
     if not ('username' in session):
         return redirect(url_for('login'))
 
-    if request.method == 'POST':
-        # Get request param
-        new_name = request.form['newname']
-        # Rename tag
-        try:
-            update_tag_name(tagname, new_name)
-        except sqlite3.IntegrityError:
-            flash(f'Tag already exists. Nothing updated: {new_name}')
-        except ValueError as err:
-            flash(f'Error: {str(err)}: {tagname}', 'error')
-        else:
-            flash(f'Tag successfully renamed: {tagname} -> {new_name}')
+    match request.method:
+        case 'POST':
+            # Get request param
+            new_name = request.form['newname']
+            # Rename tag
+            try:
+                update_tag_name(tagname, new_name)
+            except sqlite3.IntegrityError:
+                flash(f'Tag already exists. Nothing updated: {new_name}')
+            except ValueError as err:
+                flash(f'Error: {str(err)}: {tagname}', 'error')
+            else:
+                flash(f'Tag successfully renamed: {tagname} -> {new_name}')
+        case 'DELETE':
+            # Delete tag
+            delete_tag(tagname)
+            flash(f'Tag successfully deleted: {tagname}')
 
-        return redirect(url_for('show_tags'))
-    else:
-        return redirect(url_for('show_tags'))
+    return redirect(url_for('show_tags'))
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
@@ -322,6 +325,10 @@ def update_tag_name(current, new):
             case 1: pass
             # Multiple tags found
             case _: raise ValueError('Multiple tags found')
+
+def delete_tag(tagname):
+    with g.db:
+        g.db.execute('DELETE FROM tags WHERE name = ?', (tagname,))
 
 def attach_tag_to_image(tag_list, filename):
     # tag_list is a list of tags to attach to the image
