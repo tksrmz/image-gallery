@@ -1,5 +1,5 @@
 import hashlib
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, g
 import werkzeug
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -19,6 +19,24 @@ app.config.from_envvar('IMAGE_GALLERY_ENV_SETTINGS')
 app.config['IMAGE_FOLDER'] = os.path.join(app.root_path, 'static/images')
 # app.config['THUMBNAIL_FOLDER'] = os.path.join(app.root_path, 'thumbnails')
 app.secret_key = 'my_secret_key'
+
+def get_db():
+    if 'db' not in g:
+        # Establish a new connection
+        g.db = sqlite3.connect(app.config['DATABASE'])
+        # Enable foreign key constraints
+        g.db.execute("PRAGMA foreign_keys = ON;")
+    return g.db
+
+@app.before_request
+def connect_db_on_g():
+    g.db = get_db()
+
+@app.teardown_request
+def close_db_on_g(exception=None):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -51,6 +69,9 @@ def show_images():
         # Get all image if no tag is selected or filter type is something but expected
         image_list = get_image_list()
 
+    # Get all tags
+    all_tag_list = get_tag_list()
+
     # # Ensure thumbnails exist for all images
     # for image in image_files:
     #     original_path = os.path.join(app.config['IMAGE_FOLDER'], image)
@@ -65,7 +86,7 @@ def show_images():
     end = start + IMAGES_PER_PAGE
     image_files_to_display = image_list[start:end]
 
-    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, selected_tag_list=selected_tag_list, all_tag_list=get_tag_list(), filter_type=filter_type)
+    return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, selected_tag_list=selected_tag_list, all_tag_list=all_tag_list, filter_type=filter_type)
 
 @app.route('/images/<filename>')
 def send_image(filename):
@@ -184,10 +205,7 @@ def upload_file():
     return render_template('upload.html')
 
 def insert_file_data(filename, hash):
-    # Insert file data into sqlite3
-    conn = sqlite3.connect(app.config['DATABASE'])
-
-    with conn:
+    with g.db:
         # images.id is an alias for rowid as images.id is an INTEGER PRIMARY KEY
         #
         # > if a rowid table has a primary key that consists of a single column and the declared
@@ -196,17 +214,16 @@ def insert_file_data(filename, hash):
         # https://www.sqlite.org/lang_createtable.html#rowids_and_the_integer_primary_key
 
         # name will not conflict as timestamp is used as filename so try-except is not necessary
-        image_id = conn.execute('''
+        image_id = g.db.execute('''
                     INSERT INTO images (name)
                     VALUES (?)
                 ''', (filename,)).lastrowid
 
         # Uniqueness of hash is checked before this function is called so try-except is not necessary
-        conn.execute('''
+        g.db.execute('''
                     INSERT INTO hashes (hash, image_id)
                     VALUES (?, ?)
                 ''', (hash, image_id))
-    conn.close()
 
 def calculate_hash(file: werkzeug.datastructures.FileStorage):
     BLOCKSIZE = 65536
@@ -220,13 +237,11 @@ def calculate_hash(file: werkzeug.datastructures.FileStorage):
     return hasher.hexdigest()
 
 def exists_same_hash(hash):
-    conn = sqlite3.connect(app.config['DATABASE'])
-    result = conn.execute('''
+    result = g.db.execute('''
                 SELECT id
                 FROM hashes
                 WHERE hash = ?
             ''', (hash,)).fetchone()
-    conn.close()
 
     # Return True if hash exists, False otherwise
     return result != None
@@ -247,14 +262,11 @@ def exists_same_hash(hash):
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_image_list():
-    conn = sqlite3.connect(app.config['DATABASE'])
-    result = conn.execute('SELECT name FROM images').fetchall()
-    conn.close()
+    result = g.db.execute('SELECT name FROM images').fetchall()
     return [row[0] for row in result]
 
 def get_image_list_or(tag_list):
-    conn = sqlite3.connect(app.config['DATABASE'])
-    result = conn.execute(f'''
+    result = g.db.execute(f'''
             SELECT DISTINCT i.name
             FROM images AS i
             JOIN image_tags AS it
@@ -263,12 +275,10 @@ def get_image_list_or(tag_list):
                 ON it.tag_id = tg.id
             WHERE tg.name IN ({','.join(['?'] * len(tag_list))})
         ''', tuple(tag_list)).fetchall()
-    conn.close()
     return [row[0] for row in result]
 
 def get_image_list_and(tag_list):
-    conn = sqlite3.connect(app.config['DATABASE'])
-    result = conn.execute(f'''
+    result = g.db.execute(f'''
             SELECT i.name
             FROM images AS i
             JOIN image_tags AS it
@@ -279,13 +289,11 @@ def get_image_list_and(tag_list):
             GROUP BY i.name
             HAVING COUNT(DISTINCT tg.name) = ?
         ''', tuple(tag_list + [len(tag_list)])).fetchall()
-    conn.close()
     return [row[0] for row in result]
 
 def get_tags_attached_to_image(filename):
     # Read file info from sqlite3
-    conn = sqlite3.connect(app.config['DATABASE'])
-    query_result = conn.execute('''
+    query_result = g.db.execute('''
                 SELECT t.name
                 FROM tags AS t
                 JOIN image_tags AS it
@@ -295,68 +303,45 @@ def get_tags_attached_to_image(filename):
                 WHERE i.name = ?
             ''', (filename,)).fetchall()
     tag_list = [row[0] for row in query_result]
-    conn.close()
     return tag_list
 
 def get_tag_list():
-    conn = sqlite3.connect(app.config['DATABASE'])
-    tag_list = [row[0] for row in conn.execute('SELECT name FROM tags').fetchall()]
-    conn.close()
+    tag_list = [row[0] for row in g.db.execute('SELECT name FROM tags').fetchall()]
     return tag_list
 
 def create_tag(tag):
-    conn = sqlite3.connect(app.config['DATABASE'])
-    try:
-        with conn:
-            conn.execute('INSERT INTO tags (name) VALUES (?)', (tag,))
-    except sqlite3.IntegrityError:
-        raise
-    finally:
-        conn.close()
+    with g.db:
+        g.db.execute('INSERT INTO tags (name) VALUES (?)', (tag,))
 
 def update_tag_name(current, new):
-    conn = sqlite3.connect(app.config['DATABASE'])
-    try:
-        with conn:
-            match conn.execute('''
-                        UPDATE tags SET name = ? WHERE name = ?
-                    ''', (new, current)).rowcount:
-                # Can't update the target tag
-                case 0: raise ValueError('No tag found')
-                # Normal case
-                case 1: pass
-                # Multiple tags found
-                case _: raise ValueError('Multiple tags found')
-    except sqlite3.IntegrityError:
-        raise
-    except ValueError:
-        raise
-    finally:
-        conn.close()
+    with g.db:
+        match g.db.execute('UPDATE tags SET name = ? WHERE name = ?', (new, current)).rowcount:
+            # Can't update the target tag
+            case 0: raise ValueError('No tag found')
+            # Normal case
+            case 1: pass
+            # Multiple tags found
+            case _: raise ValueError('Multiple tags found')
 
 def attach_tag_to_image(tag_list, filename):
-    conn = sqlite3.connect(app.config['DATABASE'])
     # tag_list is a list of tags to attach to the image
     # and tags in tag_list is not attached to the image yet
     # so no need to add try-except for IntegrityError
-    with conn:
-        conn.executemany('''
+    with g.db:
+        g.db.executemany('''
                     INSERT INTO image_tags (image_id, tag_id)
                     SELECT
                         (SELECT id FROM images WHERE name = ?),
                         (SELECT id FROM tags WHERE name = ?)
                 ''', [(filename, tag) for tag in tag_list])
-    conn.close()
 
 def detach_tag_from_image(tag_list, filename):
-    conn = sqlite3.connect(app.config['DATABASE'])
-    with conn:
-        conn.executemany('''
+    with g.db:
+        g.db.executemany('''
                     DELETE FROM image_tags
                     WHERE image_id = (SELECT id FROM images WHERE name = ?)
                     AND tag_id = (SELECT id FROM tags WHERE name = ?)
                 ''', [(filename, tag) for tag in tag_list])
-    conn.close()
 
 def execute_script_from_file(filename):
     conn = sqlite3.connect(app.config['DATABASE'])
