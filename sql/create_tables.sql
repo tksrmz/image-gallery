@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS images (
 );
 
 CREATE TABLE IF NOT EXISTS image_tags (
-    image_id INTEGER,
-    tag_id INTEGER,
+    image_id INTEGER NOT NULL,
+    tag_id INTEGER NOT NULL,
     PRIMARY KEY (image_id, tag_id),
     FOREIGN KEY(image_id) REFERENCES images(id) ON DELETE CASCADE,
     FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
