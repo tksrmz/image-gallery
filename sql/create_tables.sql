@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS image_tags (
     image_id INTEGER,
     tag_id INTEGER,
     PRIMARY KEY (image_id, tag_id),
-    FOREIGN KEY(image_id) REFERENCES images(id),
-    FOREIGN KEY(tag_id) REFERENCES tags(id)
+    FOREIGN KEY(image_id) REFERENCES images(id) ON DELETE CASCADE,
+    FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS hashes (
