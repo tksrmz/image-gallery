@@ -28,10 +28,6 @@ def get_db():
         g.db.execute("PRAGMA foreign_keys = ON;")
     return g.db
 
-@app.before_request
-def connect_db_on_g():
-    g.db = get_db()
-
 @app.teardown_request
 def close_db_on_g(exception=None):
     db = g.pop('db', None)
@@ -228,25 +224,10 @@ def upload_file():
     return render_template('upload.html')
 
 def insert_file_data(filename, hash):
-    with g.db:
-        # images.id is an alias for rowid as images.id is an INTEGER PRIMARY KEY
-        #
-        # > if a rowid table has a primary key that consists of a single column and the declared
-        # type of that column is "INTEGER" in any mixture of upper and lower case, then the column
-        # becomes an alias for the rowid.
-        # https://www.sqlite.org/lang_createtable.html#rowids_and_the_integer_primary_key
-
+    with get_db() as conn:
         # name will not conflict as timestamp is used as filename so try-except is not necessary
-        image_id = g.db.execute('''
-                    INSERT INTO images (name)
-                    VALUES (?)
-                ''', (filename,)).lastrowid
-
         # Uniqueness of hash is checked before this function is called so try-except is not necessary
-        g.db.execute('''
-                    INSERT INTO hashes (hash, image_id)
-                    VALUES (?, ?)
-                ''', (hash, image_id))
+        conn.execute('INSERT INTO images (name, hash) VALUES (?, ?)', (filename, hash))
 
 def calculate_hash(file: werkzeug.datastructures.FileStorage):
     BLOCKSIZE = 65536
@@ -260,9 +241,9 @@ def calculate_hash(file: werkzeug.datastructures.FileStorage):
     return hasher.hexdigest()
 
 def exists_same_hash(hash):
-    result = g.db.execute('''
+    result = get_db().execute('''
                 SELECT id
-                FROM hashes
+                FROM images
                 WHERE hash = ?
             ''', (hash,)).fetchone()
 
@@ -285,11 +266,11 @@ def exists_same_hash(hash):
 #             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_image_list():
-    result = g.db.execute('SELECT name FROM images').fetchall()
+    result = get_db().execute('SELECT name FROM images').fetchall()
     return [row[0] for row in result]
 
 def get_image_list_or(tag_list):
-    result = g.db.execute(f'''
+    result = get_db().execute(f'''
             SELECT DISTINCT i.name
             FROM images AS i
             JOIN image_tags AS it
@@ -301,7 +282,7 @@ def get_image_list_or(tag_list):
     return [row[0] for row in result]
 
 def get_image_list_and(tag_list):
-    result = g.db.execute(f'''
+    result = get_db().execute(f'''
             SELECT i.name
             FROM images AS i
             JOIN image_tags AS it
@@ -316,7 +297,7 @@ def get_image_list_and(tag_list):
 
 def get_image_list_recent():
     # select images that are uploaded in last 10 days
-    result = g.db.execute('''
+    result = get_db().execute('''
                 SELECT name
                 FROM images
                 WHERE uploaded_at_utc > date('now', '-9 days')
@@ -325,7 +306,7 @@ def get_image_list_recent():
 
 def get_tags_attached_to_image(filename):
     # Read file info from sqlite3
-    query_result = g.db.execute('''
+    query_result = get_db().execute('''
                 SELECT t.name
                 FROM tags AS t
                 JOIN image_tags AS it
@@ -338,16 +319,16 @@ def get_tags_attached_to_image(filename):
     return tag_list
 
 def get_tag_list():
-    tag_list = [row[0] for row in g.db.execute('SELECT name FROM tags').fetchall()]
+    tag_list = [row[0] for row in get_db().execute('SELECT name FROM tags').fetchall()]
     return tag_list
 
 def create_tag(tag):
-    with g.db:
-        g.db.execute('INSERT INTO tags (name) VALUES (?)', (tag,))
+    with get_db() as conn:
+        conn.execute('INSERT INTO tags (name) VALUES (?)', (tag,))
 
 def update_tag_name(current, new):
-    with g.db:
-        match g.db.execute('UPDATE tags SET name = ? WHERE name = ?', (new, current)).rowcount:
+    with get_db() as conn:
+        match conn.execute('UPDATE tags SET name = ? WHERE name = ?', (new, current)).rowcount:
             # Can't update the target tag
             case 0: raise ValueError('No tag found')
             # Normal case
@@ -356,15 +337,15 @@ def update_tag_name(current, new):
             case _: raise ValueError('Multiple tags found')
 
 def delete_tag(tagname):
-    with g.db:
-        g.db.execute('DELETE FROM tags WHERE name = ?', (tagname,))
+    with get_db() as conn:
+        conn.execute('DELETE FROM tags WHERE name = ?', (tagname,))
 
 def attach_tag_to_image(tag_list, filename):
     # tag_list is a list of tags to attach to the image
     # and tags in tag_list is not attached to the image yet
     # so no need to add try-except for IntegrityError
-    with g.db:
-        g.db.executemany('''
+    with get_db() as conn:
+        conn.executemany('''
                     INSERT INTO image_tags (image_id, tag_id)
                     SELECT
                         (SELECT id FROM images WHERE name = ?),
@@ -372,8 +353,8 @@ def attach_tag_to_image(tag_list, filename):
                 ''', [(filename, tag) for tag in tag_list])
 
 def detach_tag_from_image(tag_list, filename):
-    with g.db:
-        g.db.executemany('''
+    with get_db() as conn:
+        conn.executemany('''
                     DELETE FROM image_tags
                     WHERE image_id = (SELECT id FROM images WHERE name = ?)
                     AND tag_id = (SELECT id FROM tags WHERE name = ?)
