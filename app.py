@@ -7,7 +7,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import os
 import math
 import sqlite3
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 PASSWORD_HASH = generate_password_hash('0008')
 USERNAME = 'tk'
@@ -87,6 +87,26 @@ def show_images():
     image_files_to_display = image_list[start:end]
 
     return render_template('image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page, selected_tag_list=selected_tag_list, all_tag_list=all_tag_list, filter_type=filter_type)
+
+@app.route('/recent-images')
+def show_recent_images():
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    # Get query parameters
+    page = request.args.get('page', 1, type=int)
+
+    # Get all image if no tag is selected or filter type is something but expected
+    image_list = get_image_list_recent()
+
+    # Pagenation calculations
+    total_images = len(image_list)
+    total_pages = math.ceil(total_images / IMAGES_PER_PAGE)
+    start = (page - 1) * IMAGES_PER_PAGE
+    end = start + IMAGES_PER_PAGE
+    image_files_to_display = image_list[start:end]
+
+    return render_template('recent_image.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page)
 
 @app.route('/images/<filename>')
 def send_image(filename):
@@ -292,6 +312,15 @@ def get_image_list_and(tag_list):
             GROUP BY i.name
             HAVING COUNT(DISTINCT tg.name) = ?
         ''', tuple(tag_list + [len(tag_list)])).fetchall()
+    return [row[0] for row in result]
+
+def get_image_list_recent():
+    # select images that are uploaded in last 10 days
+    result = g.db.execute('''
+                SELECT name
+                FROM images
+                WHERE uploaded_at_utc > date('now', '-9 days')
+            ''').fetchall()
     return [row[0] for row in result]
 
 def get_tags_attached_to_image(filename):
