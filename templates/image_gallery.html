@@ -10,6 +10,8 @@
     .pagination {text-align: center; margin-top: 20px; }
     .page-link { margin: 0 5px; }
     main { display: flex; flex-direction: row; }
+    #tagsForm { display: flex; flex-direction: column; overflow-y: scroll; height: 80vh; }
+    aside { position: sticky; top: 4em; align-self: flex-start; }
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
