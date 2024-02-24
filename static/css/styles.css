@@ -1,9 +1,46 @@
-nav ul {
-    display: flex;
-    flex-direction: row;
-    list-style: none;
+nav {
+    position: sticky;
+    top: 0;
+    left: 0;
+    background-color: white;
+    border-bottom: 1px solid grey;
 }
 
-nav ul li {
-    padding-right: 56px;
+nav ul {
+    display: flex;
+    gap: 1em;
+    list-style: none;
+    padding-left: 0; /* Remove default padding */
+    margin: 0; /* Remove default margin */
+    height: 3em;
+}
+
+/* navigation bar item - selected */
+li.selected-nav-item span {
+    box-sizing: border-box; /* Include padding and border in the width and height */
+    display: block;
+    height: 100%;
+    width: 100%;
+    padding: 0 0.5em;
+    line-height: 3em; /* Center text vertically. This should be same with height of `nav ul` */
+    color: white;
+    background-color: darkgray;
+}
+
+/* navigation bar items - not selected */
+li.not-selected-nav-item a {
+    box-sizing: border-box; /* Include padding and border in the width and height */
+    display: block;
+    height: 100%;
+    width: 100%;
+    padding: 0 0.5em;
+    line-height: 3em; /* Center text vertically. This should be same with height of `nav ul` */
+    color: black;
+    text-decoration: none;
+}
+
+.not-selected-nav-item:hover {
+    color: black;
+    background-color: lightgrey;
+    text-decoration: none;
 }

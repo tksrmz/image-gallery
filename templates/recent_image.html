@@ -19,10 +19,10 @@
   </header>
   <nav>
     <ul>
-      <li><a href="{{ url_for('show_images') }}">Gallery</a></li>
-      <li>Recent</li>
-      <li><a href="{{ url_for('upload_file') }}">Upload</a></li>
-      <li><a href="{{ url_for('show_tags') }}">Tags</a></li>
+      <li class="not-selected-nav-item"><a href="{{ url_for('show_images') }}">Gallery</a></li>
+      <li class="selected-nav-item"><span>Recent</span></li>
+      <li class="not-selected-nav-item"><a href="{{ url_for('upload_file') }}">Upload</a></li>
+      <li class="not-selected-nav-item"><a href="{{ url_for('show_tags') }}">Tags</a></li>
     </ul>
   </nav>
 
