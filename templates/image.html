@@ -5,6 +5,7 @@
   <title>{{ image_name }}</title>
   <style>
     img { width: 100vw; }
+    .navigation-button { display: flex; justify-content: space-between; }
   </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
@@ -24,6 +25,20 @@
   <main>
     <section class="image-container">
       <h2>{{ filename }}</h2>
+      <div class="navigation-button">
+        {% if previous_image %}
+          <a href="{{ url_for('send_image', filename=previous_image) }}">Previous</a>
+        {% else %}
+          <!-- Place holder -->
+          <span></span>
+        {% endif %}
+        {% if next_image %}
+          <a href="{{ url_for('send_image', filename=next_image) }}">Next</a>
+        {% else %}
+          <!-- Place holder -->
+          <span></span>
+        {% endif %}
+      </div>
       <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}">
     </section>
     <section>
