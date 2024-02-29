@@ -113,7 +113,6 @@ def send_image(filename):
     all_tag_list = get_tag_list()
 
     [previous_image, next_image] = get_previous_and_next_image(filename)
-    app.logger.debug(f'previous_image: {previous_image}, next_image: {next_image}')
 
     return render_template('image.html', filename=filename, attached_tag_list=attached_tag_list, all_tag_list=all_tag_list, previous_image=previous_image, next_image=next_image)
 
@@ -285,7 +284,7 @@ def get_image_list_or(tag_list):
             JOIN tags AS tg
                 ON it.tag_id = tg.id
             WHERE tg.name IN ({','.join(['?'] * len(tag_list))})
-            ORDER BY uploaded_at_utc DESC, name ASC
+            ORDER BY uploaded_at_utc DESC, i.name ASC
         ''', tuple(tag_list)).fetchall()
     return [row[0] for row in result]
 
@@ -300,7 +299,7 @@ def get_image_list_and(tag_list):
             WHERE tg.name IN ({','.join(['?'] * len(tag_list))})
             GROUP BY i.name
             HAVING COUNT(DISTINCT tg.name) = ?
-            ORDER BY uploaded_at_utc DESC, name ASC
+            ORDER BY uploaded_at_utc DESC, i.name ASC
         ''', tuple(tag_list + [len(tag_list)])).fetchall()
     return [row[0] for row in result]
 
@@ -335,7 +334,6 @@ def get_previous_and_next_image(filename):
             JOIN Target T ON R.row_num IN (T.row_num - 1, T.row_num, T.row_num + 1)
             ORDER BY R.uploaded_at_utc DESC, R.name ASC
         ''', (filename,)).fetchall()
-    app.logger.debug(f'result: {result}')
 
     # If the image is the first or last, the result will have only 2 rows
     if len(result) == 2:
