@@ -26,14 +26,20 @@
     <section class="image-container">
       <h2>{{ filename }}</h2>
       <div class="navigation-button">
+        <!-- set query parmeter of tag and filter_type when both exist -->
+        {% set repeated_query_parameter = '' %}
+        {% if selected_tag_list %}
+          {% set repeated_query_parameter = '&tag=' + selected_tag_list|join('&tag=') %}
+        {% endif %}
         {% if previous_image %}
-          <a href="{{ url_for('send_image', filename=previous_image) }}">Previous</a>
+          <a href="{{ url_for('send_image', filename=previous_image, filter_type=filter_type) + repeated_query_parameter }}">Previous</a>
         {% else %}
           <!-- Place holder -->
           <span></span>
         {% endif %}
+        <a href="{{ url_for('show_images', filter_type=filter_type) + repeated_query_parameter }}">Gallery</a>
         {% if next_image %}
-          <a href="{{ url_for('send_image', filename=next_image) }}">Next</a>
+          <a href="{{ url_for('send_image', filename=next_image, filter_type=filter_type) + repeated_query_parameter }}">Next</a>
         {% else %}
           <!-- Place holder -->
           <span></span>

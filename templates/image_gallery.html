@@ -46,9 +46,13 @@
       <section>
         <h2>Images</h2>
         <div class="image-container">
+          {% set repeated_query_parameter = '' %}
+          {% if selected_tag_list %}
+            {% set repeated_query_parameter = '&tag=' + selected_tag_list|join('&tag=') %}
+          {% endif %}
           {% for image in image_files %}
             <div class="image-box">
-              <a href="{{ url_for('send_image', filename=image) }}">
+              <a href="{{ url_for('send_image', filename=image, filter_type=filter_type) + repeated_query_parameter }}">
                 <img src="{{ url_for('static', filename='images/' + image) }}" alt="{{ image }}">
               </a>
             </div>

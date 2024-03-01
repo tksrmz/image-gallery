@@ -109,12 +109,22 @@ def send_image(filename):
     if not ('username' in session):
         return redirect(url_for('login'))
 
+    # Get query parameters
+    selected_tag_list = request.args.getlist('tag')
+    filter_type = request.args.get('filter_type', 'and')
+
     attached_tag_list = get_tags_attached_to_image(filename)
     all_tag_list = get_tag_list()
 
-    [previous_image, next_image] = get_previous_and_next_image(filename)
+    # Get previous and next image
+    if len(selected_tag_list) > 0 and filter_type == 'and':
+        [previous_image, next_image] = get_previous_and_next_image_and(filename, selected_tag_list)
+    elif len(selected_tag_list) > 0 and filter_type == 'or':
+        [previous_image, next_image] = get_previous_and_next_image_or(filename, selected_tag_list)
+    else:
+        [previous_image, next_image] = get_previous_and_next_image(filename)
 
-    return render_template('image.html', filename=filename, attached_tag_list=attached_tag_list, all_tag_list=all_tag_list, previous_image=previous_image, next_image=next_image)
+    return render_template('image.html', filename=filename, attached_tag_list=attached_tag_list, all_tag_list=all_tag_list, previous_image=previous_image, next_image=next_image, selected_tag_list=selected_tag_list, filter_type=filter_type)
 
 # @app.route('/thumbnails/<filename>')
 # def send_thumbnail(filename):
@@ -334,6 +344,95 @@ def get_previous_and_next_image(filename):
             JOIN Target T ON R.row_num IN (T.row_num - 1, T.row_num, T.row_num + 1)
             ORDER BY R.uploaded_at_utc DESC, R.name ASC
         ''', (filename,)).fetchall()
+
+    # If the image is the first or last, the result will have only 2 rows
+    if len(result) == 2:
+        if result[0][0] == filename:
+            return (None, result[1][0])
+        else:
+            return (result[0][0], None)
+
+    # the result have three rows
+    assert len(result) == 3
+    return (result[0][0], result[2][0])
+
+def get_previous_and_next_image_or(filename, tag_list):
+    result = get_db().execute(f'''
+            WITH Source AS (
+                SELECT i.id, i.name, i.uploaded_at_utc
+                FROM images AS i
+                JOIN image_tags AS it
+                    ON i.id = it.image_id
+                JOIN tags AS tg
+                    ON it.tag_id = tg.id
+                WHERE tg.name IN ({','.join(['?'] * len(tag_list))})
+                ORDER BY uploaded_at_utc DESC, i.name ASC
+            ),
+            Ranked AS (
+                SELECT
+                    name,
+                    uploaded_at_utc,
+                    LAG(name) OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS preceding_name,
+                    LEAD(name) OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS following_name,
+                    ROW_NUMBER() OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS row_num
+                FROM Source
+            ),
+            Target AS (
+                SELECT row_num FROM Ranked WHERE name = ?
+            )
+            SELECT
+                R.name,
+                R.uploaded_at_utc
+            FROM Ranked R
+            JOIN Target T ON R.row_num IN (T.row_num - 1, T.row_num, T.row_num + 1)
+            ORDER BY R.uploaded_at_utc DESC, R.name ASC
+        ''', tuple(tag_list + [filename])).fetchall()
+
+    # If the image is the first or last, the result will have only 2 rows
+    if len(result) == 2:
+        if result[0][0] == filename:
+            return (None, result[1][0])
+        else:
+            return (result[0][0], None)
+
+    # the result have three rows
+    assert len(result) == 3
+    return (result[0][0], result[2][0])
+
+def get_previous_and_next_image_and(filename, tag_list):
+    result = get_db().execute(f'''
+            WITH
+            Source AS (
+                SELECT i.id, i.name, i.uploaded_at_utc
+                FROM images AS i
+                JOIN image_tags AS it
+                    ON i.id = it.image_id
+                JOIN tags AS tg
+                    ON it.tag_id = tg.id
+                WHERE tg.name IN ({','.join(['?'] * len(tag_list))})
+                GROUP BY i.name
+                HAVING COUNT(DISTINCT tg.name) = ?
+                ORDER BY uploaded_at_utc DESC, i.name ASC
+            ),
+            Ranked AS (
+                SELECT
+                    name,
+                    uploaded_at_utc,
+                    LAG(name) OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS preceding_name,
+                    LEAD(name) OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS following_name,
+                    ROW_NUMBER() OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS row_num
+                FROM Source
+            ),
+            Target AS (
+                SELECT row_num FROM Ranked WHERE name = ?
+            )
+            SELECT
+                R.name,
+                R.uploaded_at_utc
+            FROM Ranked R
+            JOIN Target T ON R.row_num IN (T.row_num - 1, T.row_num, T.row_num + 1)
+            ORDER BY R.uploaded_at_utc DESC, R.name ASC
+        ''', tuple(tag_list + [len(tag_list), filename])).fetchall()
 
     # If the image is the first or last, the result will have only 2 rows
     if len(result) == 2:
