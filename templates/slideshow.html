@@ -31,6 +31,7 @@
     <input type="text" id="first_image" value="{{ first_image or '' }}">
     <input type="text" id="image_url" value="{{ url_for('static', filename='images/') }}">
     <input type="text" id="random" value="{{ 'true' if random else '' }}">
+    <input type="number" id="interval" value="{{ interval }}">
   </div>
 
   <script>
@@ -43,6 +44,8 @@
     const firstImage = document.getElementById('first_image').value;
     const imageUrl = document.getElementById('image_url').value;
     const isShuffle = document.getElementById('random').value;
+    // Convert the interval to milliseconds
+    const interval = document.getElementById('interval').value * 1000;
 
     // Fetch the filtered image list
     function fetchImages() {
@@ -98,7 +101,7 @@
     }
 
     function startSlideshow() {
-      setInterval(nextImage, 10000); // Change image every 10 seconds
+      setInterval(nextImage, interval); // Change image every 10 seconds
     }
 
     function shuffle(a) {

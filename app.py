@@ -284,8 +284,9 @@ def return_slideshow_template():
     filter_type = request.args.get('filter_type', 'and')
     first_image = request.args.get('first_image')
     random = request.args.get('random')
+    interval = request.args.get('interval', 10, type=int) # in seconds
 
-    return render_template('slideshow.html', tag_list=tag_list, filter_type=filter_type, first_image=first_image, random= True if random == 'true' else False)
+    return render_template('slideshow.html', tag_list=tag_list, filter_type=filter_type, first_image=first_image, random= True if random == 'true' else False, interval=interval)
 
 @app.route('/api/images')
 def api_images():
