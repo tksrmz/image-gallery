@@ -105,12 +105,17 @@ def show_recent_images():
     return render_template('recent_image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page)
 
 @app.route('/recent-images/<filename>')
-def send_recent_images():
+def send_recent_image(filename):
     if not ('username' in session):
         return redirect(url_for('login'))
 
-    # TODO implement this
-    assert False
+    attached_tag_list = get_tags_attached_to_image(filename)
+    all_tag_list = get_tag_list()
+
+    # Get previous and next image
+    [previous_image, next_image] = get_previous_and_next_recent_image(filename)
+
+    return render_template('recent_image.html', filename=filename, attached_tag_list=attached_tag_list, all_tag_list=all_tag_list, previous_image=previous_image, next_image=next_image)
 
 @app.route('/images/<filename>')
 def send_image(filename):
@@ -441,6 +446,40 @@ def get_previous_and_next_image_and(filename, tag_list):
             JOIN Target T ON R.row_num IN (T.row_num - 1, T.row_num, T.row_num + 1)
             ORDER BY R.uploaded_at_utc DESC, R.name ASC
         ''', tuple(tag_list + [len(tag_list), filename])).fetchall()
+
+    # If the image is the first or last, the result will have only 2 rows
+    if len(result) == 2:
+        if result[0][0] == filename:
+            return (None, result[1][0])
+        else:
+            return (result[0][0], None)
+
+    # the result have three rows
+    assert len(result) == 3
+    return (result[0][0], result[2][0])
+
+def get_previous_and_next_recent_image(filename):
+    result = get_db().execute('''
+            WITH Ranked AS (
+                SELECT
+                    name,
+                    uploaded_at_utc,
+                    LAG(name) OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS preceding_name,
+                    LEAD(name) OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS following_name,
+                    ROW_NUMBER() OVER (ORDER BY uploaded_at_utc DESC, name ASC) AS row_num
+                FROM images
+                WHERE uploaded_at_utc > date('now', '-9 days')
+            ),
+            Target AS (
+                SELECT row_num FROM Ranked WHERE name = ?
+            )
+            SELECT
+                R.name,
+                R.uploaded_at_utc
+            FROM Ranked R
+            JOIN Target T ON R.row_num IN (T.row_num - 1, T.row_num, T.row_num + 1)
+            ORDER BY R.uploaded_at_utc DESC, R.name ASC
+        ''', (filename,)).fetchall()
 
     # If the image is the first or last, the result will have only 2 rows
     if len(result) == 2:

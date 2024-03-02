@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ image_name }}</title>
+  <style>
+    img { width: 100vw; }
+    .navigation-button { display: flex; justify-content: space-between; }
+  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Image Gallery</h1>
+  </header>
+  <nav>
+    <ul>
+      <li class="not-selected-nav-item"><a href="{{ url_for('show_images') }}">Gallery</a></li>
+      <li class="not-selected-nav-item"><a href="{{ url_for('show_recent_images') }}">Recent</a></li>
+      <li class="not-selected-nav-item"><a href="{{ url_for('upload_file') }}">Upload</a></li>
+      <li class="not-selected-nav-item"><a href="{{ url_for('show_tags') }}">Tags</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section>
+      <h2>{{ filename }}</h2>
+      <div class="navigation-button">
+        {% if previous_image %}
+          <a href="{{ url_for('send_recent_image', filename=previous_image) }}">Previous</a>
+        {% else %}
+          <!-- Place holder -->
+          <span></span>
+        {% endif %}
+        <a href="{{ url_for('show_recent_images') }}">Recent</a>
+        {% if next_image %}
+          <a href="{{ url_for('send_recent_image', filename=next_image) }}">Next</a>
+        {% else %}
+          <!-- Place holder -->
+          <span></span>
+        {% endif %}
+      </div>
+      <img src="{{ url_for('static', filename='images/' + filename) }}" alt="{{ filename }}">
+    </section>
+    <section>
+      <form action="{{ url_for('update_tags_on_image', filename=filename) }}" method="post" id="tagsForm">
+        {% for tag in all_tag_list %}
+          <div>
+            <input type="checkbox" id="tag-{{ tag }}" name="tag" value="{{ tag }}" {% if tag in attached_tag_list %}checked{% endif %}>
+            <label for="tag-{{ tag }}">{{ tag }}</label>
+          </div>
+        {% endfor %}
+        <input type="submit" value="Attach/Detach tag">
+      </form>
+    </section>
+  </main>
+</body>
+</html>
+

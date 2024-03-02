@@ -28,25 +28,12 @@
 
   <main>
     <article>
-      {% if selected_tag_list %}
-        <section>
-          <h2>Filter setting</h2>
-          <p>Filter type: {{ filter_type }}</p>
-          <ul>
-            {% for selected_tag in selected_tag_list %}
-              <li>{{ selected_tag }}</li>
-            {% endfor %}
-          </ul>
-          <p><a href="{{ url_for('show_images') }}">Clear filter</a></p>
-        </section>
-      {% endif %}
-
       <section>
         <h2>Images uploaded in last 10 days</h2>
         <div class="image-container">
           {% for image in image_files %}
             <div class="image-box">
-              <a href="{{ url_for('send_image', filename=image) }}">
+              <a href="{{ url_for('send_recent_image', filename=image) }}">
                 <img src="{{ url_for('static', filename='images/' + image) }}" alt="{{ image }}">
               </a>
             </div>
@@ -60,13 +47,7 @@
           {% if page_num == current_page %}
             <span class="page-link">{{ page_num }}</span>
           {% else %}
-            {% if selected_tag_list %}
-              {% set base_url = url_for('show_images', page=page_num, filter_type=filter_type) %}
-              {% set tag_query = '&tag=' + selected_tag_list|join('&tag=') %}
-              <a href="{{ base_url + tag_query }}" class="page-link">{{ page_num }}</a>
-            {% else %}
-              <a href="{{ url_for('show_images', page=page_num) }}" class="page-link">{{ page_num }}</a>
-            {% endif %}
+            <a href="{{ url_for('show_images', page=page_num) }}" class="page-link">{{ page_num }}</a>
           {% endif %}
         {% endfor %}
       </section>
