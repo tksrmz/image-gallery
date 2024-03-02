@@ -102,7 +102,15 @@ def show_recent_images():
     end = start + IMAGES_PER_PAGE
     image_files_to_display = image_list[start:end]
 
-    return render_template('recent_image.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page)
+    return render_template('recent_image_gallery.html', image_files=image_files_to_display, total_pages=total_pages, current_page=page)
+
+@app.route('/recent-images/<filename>')
+def send_recent_images():
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    # TODO implement this
+    assert False
 
 @app.route('/images/<filename>')
 def send_image(filename):
