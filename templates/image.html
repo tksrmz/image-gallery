@@ -23,7 +23,17 @@
   </nav>
 
   <main>
-    <section class="image-container">
+    <section>
+      <!-- Show current filter setting inherited from image_gallery page when selected_tag_list exists -->
+      {% if selected_tag_list %}
+        <h2>Current filter</h2>
+        <p>Filter type: {{ filter_type }}</p>
+        <ul>
+          {% for selected_tag in selected_tag_list %}
+            <li>{{ selected_tag }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
       <h2>{{ filename }}</h2>
       <div class="navigation-button">
         <!-- set query parmeter of tag and filter_type when both exist -->
