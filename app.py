@@ -1,5 +1,5 @@
 import hashlib
-from flask import Flask, render_template, request, redirect, url_for, flash, session, g, send_file
+from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, session, g, send_file
 import werkzeug
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -58,14 +58,8 @@ def show_images():
     selected_tag_list = request.args.getlist('tag')
     filter_type = request.args.get('filter_type', 'and')
 
-    # Get image list displayed on the page
-    if len(selected_tag_list) > 0 and filter_type == 'and':
-        image_list = get_image_list_and(selected_tag_list)
-    elif len(selected_tag_list) > 0 and filter_type == 'or':
-        image_list = get_image_list_or(selected_tag_list)
-    else:
-        # Get all image if no tag is selected or filter type is something but expected
-        image_list = get_image_list()
+    # Get image list
+    image_list = service_get_image_list(selected_tag_list, filter_type)
 
     # Get all tags
     all_tag_list = get_tag_list()
@@ -279,6 +273,45 @@ def export_images():
     memory_file.seek(0)
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     return send_file(memory_file, download_name=f"exported_images_{timestamp}.zip", as_attachment=True)
+
+@app.route('/slideshow')
+def return_slideshow_template():
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    # Get query parameters
+    tag_list = request.args.getlist('tag')
+    filter_type = request.args.get('filter_type', 'and')
+    first_image = request.args.get('first_image')
+    random = request.args.get('random')
+
+    return render_template('slideshow.html', tag_list=tag_list, filter_type=filter_type, first_image=first_image, random= True if random == 'true' else False)
+
+@app.route('/api/images')
+def api_images():
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    # Get query parameters
+    selected_tag_list = request.args.getlist('tag')
+    filter_type = request.args.get('filter_type', 'and')
+
+    # Get image list
+    image_list = service_get_image_list(selected_tag_list, filter_type)
+
+    return jsonify(image_list)
+
+def service_get_image_list(tag_list, filter_type):
+    # Get image list displayed on the page
+    if len(tag_list) > 0 and filter_type == 'and':
+        image_list = get_image_list_and(tag_list)
+    elif len(tag_list) > 0 and filter_type == 'or':
+        image_list = get_image_list_or(tag_list)
+    else:
+        # Get all image if no tag is selected or filter type is something but expected
+        image_list = get_image_list()
+
+    return image_list
 
 def insert_file_data(filename, hash):
     with get_db() as conn:

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Slideshow</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      background-color: black;
+      height: 100vh;
+      width: 100vw;
+    }
+    #slideshow-image {
+      width: 100vw; /* ensures the image width does not exceed the width of the screen*/
+      height: 100vh; /* ensures the image height does not exceed the height of the viewport */
+      object-fit: contain; /* ensures the image fits within the dimensions of the container */
+      display: block; /* removes any extra space below the image */
+      margin: 0 auto; /* centers the image horizontally if it's not as wide as the screen */
+    }
+  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <img src="" id="slideshow-image">
+
+  <div hidden>
+    <input type="text" id="tag_list" value="{{ tag_list }}">
+    <input type="text" id="filter_type" value="{{ filter_type }}">
+    <input type="text" id="first_image" value="{{ first_image or '' }}">
+    <input type="text" id="image_url" value="{{ url_for('static', filename='images/') }}">
+    <input type="text" id="random" value="{{ 'true' if random else '' }}">
+  </div>
+
+  <script>
+    let currentImageIndex = 0;
+    let imageList = [];
+
+    // Get data
+    const tagList = JSON.parse(document.getElementById('tag_list').value.replaceAll("'", '"'));
+    const filterType = document.getElementById('filter_type').value;
+    const firstImage = document.getElementById('first_image').value;
+    const imageUrl = document.getElementById('image_url').value;
+    const isShuffle = document.getElementById('random').value;
+
+    // Fetch the filtered image list
+    function fetchImages() {
+      let queryParams = '';
+      if (tagList.length > 0) {
+        queryParams = `?tag=${tagList.join('&tag=')}`;
+      }
+      if (filterType) {
+        queryParams = queryParams ? queryParams + `&filter_type=${filterType}` : `?filter_type=${filterType}`;
+      }
+      fetch(`/api/images${queryParams}`)
+        .then(response => response.json())
+        .then(data => {
+          imageList = data;
+          if (imageList.length > 0) {
+            if (isShuffle) {
+              imageList = shuffle(imageList);
+            }
+            if (firstImage) {
+              currentImageIndex = imageList.indexOf(firstImage);
+            }
+
+            displayImage(currentImageIndex);
+            startSlideshow(); // Start the automatic slideshow
+          }
+        })
+        .catch(error => console.error('Error fetching images:', error));
+    }
+
+    // Display the current image
+    function displayImage(index) {
+      document.getElementById('slideshow-image').src = imageUrl + `${imageList[index]}`;
+    }
+
+    // Navigate to the next image
+    function nextImage() {
+      if (currentImageIndex < imageList.length - 1) {
+        currentImageIndex++;
+      } else {
+        currentImageIndex = 0; // Loop back to the first image
+      }
+      displayImage(currentImageIndex);
+    }
+
+    // Navigate to the previous image
+    function prevImage() {
+      if (currentImageIndex > 0) {
+        currentImageIndex--;
+      } else {
+        currentImageIndex = imageList.length - 1; // Loop back to the last image
+      }
+      displayImage(currentImageIndex);
+    }
+
+    function startSlideshow() {
+      setInterval(nextImage, 10000); // Change image every 10 seconds
+    }
+
+    function shuffle(a) {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // Initial fetch
+    fetchImages();
+  </script>
+</body>
+</html>
+

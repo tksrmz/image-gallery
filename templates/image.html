@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>{{ image_name }}</title>
+  <title>{{ filename }}</title>
   <style>
     img { width: 100vw; }
     .navigation-button { display: flex; justify-content: space-between; }
@@ -10,6 +10,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+  {% set repeated_query_parameter = '' %}
+  {% if selected_tag_list %}
+    {% set repeated_query_parameter = '&tag=' + selected_tag_list|join('&tag=') %}
+  {% endif %}
   <header>
     <h1>Image Gallery</h1>
   </header>
@@ -34,13 +38,10 @@
           {% endfor %}
         </ul>
       {% endif %}
+      <p><a href="{{ url_for('return_slideshow_template', filter_type=filter_type, first_image=filename) + repeated_query_parameter }}">slideshow</a></p>
       <h2>{{ filename }}</h2>
       <div class="navigation-button">
         <!-- set query parmeter of tag and filter_type when both exist -->
-        {% set repeated_query_parameter = '' %}
-        {% if selected_tag_list %}
-          {% set repeated_query_parameter = '&tag=' + selected_tag_list|join('&tag=') %}
-        {% endif %}
         {% if previous_image %}
           <a href="{{ url_for('send_image', filename=previous_image, filter_type=filter_type) + repeated_query_parameter }}">Previous</a>
         {% else %}
