@@ -1,5 +1,5 @@
 import hashlib
-from flask import Flask, render_template, request, redirect, url_for, flash, session, g
+from flask import Flask, render_template, request, redirect, url_for, flash, session, g, send_file
 import werkzeug
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -7,7 +7,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import os
 import math
 import sqlite3
-from datetime import datetime, date, timedelta
+from datetime import datetime
+import zipfile
+from io import BytesIO
 
 PASSWORD_HASH = generate_password_hash('0008')
 USERNAME = 'tk'
@@ -247,6 +249,36 @@ def upload_file():
             return redirect(url_for('upload_file'))
 
     return render_template('upload.html')
+
+@app.route('/zip')
+def export_images():
+    if not ('username' in session):
+        return redirect(url_for('login'))
+
+    # Get filter settings from query parameters or session
+    selected_tag_list = request.args.getlist('tag')
+    filter_type = request.args.get('filter_type', 'and')
+
+    # Determine the images to include based on filter settings
+    if len(selected_tag_list) > 0 and filter_type == 'and':
+        image_list = get_image_list_and(selected_tag_list)
+    elif len(selected_tag_list) > 0 and filter_type == 'or':
+        image_list = get_image_list_or(selected_tag_list)
+    else:
+        image_list = get_image_list()
+
+    # Create a zip file in memory
+    memory_file = BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Add images to the zip file
+        for image in image_list:
+            image_path = os.path.join(app.config['IMAGE_FOLDER'], image)
+            zf.write(image_path, arcname=image)
+
+    # Prepare the zip file for downloading
+    memory_file.seek(0)
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    return send_file(memory_file, download_name=f"exported_images_{timestamp}.zip", as_attachment=True)
 
 def insert_file_data(filename, hash):
     with get_db() as conn:
